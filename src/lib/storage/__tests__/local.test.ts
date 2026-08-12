@@ -32,9 +32,9 @@ describe('local storage', () => {
     localStorage.setItem('mtts:doc', '{broken')
     expect(loadDocument()).toBeNull()
   })
-})
 
   it('形状不完整的 JSON 返回 null', () => {
     localStorage.setItem('mtts:doc', JSON.stringify({ id: 'doc-1' }))
     expect(loadDocument()).toBeNull()
+  })
 })
