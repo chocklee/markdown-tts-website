@@ -17,6 +17,7 @@ export interface ReaderBlock {
   depth: number
   text: string
   sentenceIds: string[]
+  sentenceTexts: string[]
   node: RootContent
 }
 

@@ -9,6 +9,7 @@ function block(id: string, type: ReaderBlock['type'], sentenceIds: string[], dep
     depth,
     text: '',
     sentenceIds,
+    sentenceTexts: [],
     node: { type: 'paragraph' } as ReaderBlock['node'],
   }
 }

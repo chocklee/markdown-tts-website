@@ -1,5 +1,4 @@
 import type { RootContent } from 'mdast'
-import { splitSentences } from './sentenceize'
 
 export interface StyledLeaf {
   text: string
@@ -25,6 +24,8 @@ export function flattenInline(node: RootContent): StyledLeaf[] {
       return node.children.flatMap((c) => flattenInline(c))
     case 'tableCell':
       return node.children.flatMap((c) => flattenInline(c))
+    case 'delete':
+      return node.children.flatMap((c) => flattenInline(c))
     case 'listItem':
     case 'paragraph':
     case 'blockquote':
@@ -48,6 +49,8 @@ export interface SentenceWithParts {
 }
 
 const END_RE = /[。！？!?…」』”’.]$/
+const ONLY_PUNCT_RE = /^[。！？!?…」』”’.,，、;；:：]+$/
+const BOUNDARY_RE = /(?<=[。！？!?…」』”’.])\s*/
 
 export function groupLeavesIntoSentences(
   leaves: StyledLeaf[],
@@ -57,8 +60,15 @@ export function groupLeavesIntoSentences(
   let current: SentenceWithParts | null = null
 
   for (const leaf of leaves) {
-    for (const piece of splitSentences(leaf.text)) {
-      const part: StyledLeaf = { ...leaf, text: piece }
+    const rawPieces = leaf.text.replace(/\s+/g, ' ').split(BOUNDARY_RE)
+    for (const raw of rawPieces) {
+      const piece = raw.trim()
+      if (!piece) continue
+      if (ONLY_PUNCT_RE.test(piece) && sentences.length > 0) {
+        sentences[sentences.length - 1].parts.push({ ...leaf, text: raw })
+        continue
+      }
+      const part: StyledLeaf = { ...leaf, text: raw }
       if (!current) current = { id: nextId(), parts: [] }
       current.parts.push(part)
       if (END_RE.test(piece)) {

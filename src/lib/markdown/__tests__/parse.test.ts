@@ -54,4 +54,11 @@ describe('parseDocument', () => {
     const doc = parseDocument('只有一段文字。', '我的笔记')
     expect(doc.title).toBe('我的笔记')
   })
+
+  it('每个块的句子数量与渲染分组一致', () => {
+    const doc = parseDocument(SAMPLE)
+    for (const block of doc.blocks) {
+      expect(block.sentenceTexts).toHaveLength(block.sentenceIds.length)
+    }
+  })
 })

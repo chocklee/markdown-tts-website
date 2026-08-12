@@ -68,4 +68,20 @@ describe('groupLeavesIntoSentences', () => {
     const sentences = groupLeavesIntoSentences(leaves, () => `s${++n}`)
     expect(sentences.map((s) => s.id)).toEqual(['s1', 's2'])
   })
+
+  it('标点单独成叶子时并入前一句', () => {
+    const leaves = [{ text: '你好。', bold: true }, { text: '！' }]
+    let n = 0
+    const sentences = groupLeavesIntoSentences(leaves, () => `s${++n}`)
+    expect(sentences).toHaveLength(1)
+    expect(sentences[0].parts.map((p) => p.text).join('')).toBe('你好。！')
+  })
+
+  it('保留叶子间空白', () => {
+    const leaves = [{ text: 'Hello', bold: true }, { text: ' world.' }]
+    let n = 0
+    const sentences = groupLeavesIntoSentences(leaves, () => `s${++n}`)
+    expect(sentences).toHaveLength(1)
+    expect(sentences[0].parts.map((p) => p.text).join('')).toBe('Hello world.')
+  })
 })

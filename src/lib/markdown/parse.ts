@@ -2,7 +2,7 @@ import { remark } from 'remark'
 import gfm from 'remark-gfm'
 import type { RootContent } from 'mdast'
 import { splitSentences } from './sentenceize'
-import { plainText } from './inline'
+import { flattenInline, groupLeavesIntoSentences, plainText } from './inline'
 import { buildChapters } from './chapters'
 import type { ReaderBlock, ReaderDocument } from '@/types/reader'
 
@@ -41,37 +41,52 @@ function toBlock(node: RootContent, index: number, nextId: () => string): Reader
   switch (node.type) {
     case 'heading': {
       const text = plainText(node)
-      return { id, type: 'heading', depth: node.depth, text, sentenceIds: sentencesWithIds(text, nextId), node }
+      const sentences = groupLeavesIntoSentences(flattenInline(node), nextId)
+      const sentenceIds = sentences.map((s) => s.id)
+      const sentenceTexts = sentences.map((s) => s.parts.map((p) => p.text).join(''))
+      return { id, type: 'heading', depth: node.depth, text, sentenceIds, sentenceTexts, node }
     }
     case 'paragraph': {
       const text = plainText(node)
-      return { id, type: 'paragraph', depth: 0, text, sentenceIds: sentencesWithIds(text, nextId), node }
+      const sentences = groupLeavesIntoSentences(flattenInline(node), nextId)
+      const sentenceIds = sentences.map((s) => s.id)
+      const sentenceTexts = sentences.map((s) => s.parts.map((p) => p.text).join(''))
+      return { id, type: 'paragraph', depth: 0, text, sentenceIds, sentenceTexts, node }
     }
     case 'list': {
       const text = node.children.map((item) => plainText(item)).join(' ')
-      return { id, type: 'list', depth: 0, text, sentenceIds: sentencesWithIds(text, nextId), node }
+      const sentences = node.children.flatMap((item) => groupLeavesIntoSentences(flattenInline(item), nextId))
+      const sentenceIds = sentences.map((s) => s.id)
+      const sentenceTexts = sentences.map((s) => s.parts.map((p) => p.text).join(''))
+      return { id, type: 'list', depth: 0, text, sentenceIds, sentenceTexts, node }
     }
     case 'blockquote': {
       const text = node.children.map((c) => plainText(c)).join(' ')
-      return { id, type: 'blockquote', depth: 0, text, sentenceIds: sentencesWithIds(text, nextId), node }
+      const sentences = groupLeavesIntoSentences(flattenInline(node), nextId)
+      const sentenceIds = sentences.map((s) => s.id)
+      const sentenceTexts = sentences.map((s) => s.parts.map((p) => p.text).join(''))
+      return { id, type: 'blockquote', depth: 0, text, sentenceIds, sentenceTexts, node }
     }
     case 'code': {
       const text = node.value
-      return { id, type: 'code', depth: 0, text, sentenceIds: sentencesWithIds(text, nextId), node }
+      return { id, type: 'code', depth: 0, text, sentenceIds: sentencesWithIds(text, nextId), sentenceTexts: splitSentences(text), node }
     }
     case 'table': {
       const text = node.children
         .map((row) => row.children.map((cell) => plainText(cell)).join('，'))
         .join('。')
-      return { id, type: 'table', depth: 0, text, sentenceIds: sentencesWithIds(text, nextId), node }
+      return { id, type: 'table', depth: 0, text, sentenceIds: sentencesWithIds(text, nextId), sentenceTexts: splitSentences(text), node }
     }
     case 'thematicBreak':
-      return { id, type: 'thematicBreak', depth: 0, text: '', sentenceIds: [], node }
+      return { id, type: 'thematicBreak', depth: 0, text: '', sentenceIds: [], sentenceTexts: [], node }
     case 'html':
-      return { id, type: 'html', depth: 0, text: '', sentenceIds: [], node }
+      return { id, type: 'html', depth: 0, text: '', sentenceIds: [], sentenceTexts: [], node }
     default: {
       const text = plainText(node as RootContent)
-      return { id, type: 'paragraph', depth: 0, text, sentenceIds: sentencesWithIds(text, nextId), node }
+      const sentences = groupLeavesIntoSentences(flattenInline(node), nextId)
+      const sentenceIds = sentences.map((s) => s.id)
+      const sentenceTexts = sentences.map((s) => s.parts.map((p) => p.text).join(''))
+      return { id, type: 'paragraph', depth: 0, text, sentenceIds, sentenceTexts, node }
     }
   }
 }
