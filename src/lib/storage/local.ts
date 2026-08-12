@@ -36,3 +36,7 @@ export function loadPosition(docId: string): string | null {
     return null
   }
 }
+
+export function clearPosition(): void {
+  localStorage.removeItem(POS_KEY)
+}
