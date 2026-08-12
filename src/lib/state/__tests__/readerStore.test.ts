@@ -38,6 +38,12 @@ function freshStore() {
   return { engine, store: useReaderStore.getState() }
 }
 
+function playToEnd(engine: FakeEngine) {
+  for (let i = 0; i < 5; i++) {
+    engine.speakCalls[i].onend()
+  }
+}
+
 describe('readerStore', () => {
   beforeEach(() => {
     freshStore()
@@ -100,7 +106,6 @@ describe('readerStore', () => {
     expect(useReaderStore.getState().currentIndex).toBe(3)
     expect(engine.speakCalls).toHaveLength(0)
   })
-})
 
   it('seekTo 只定位不自动播放', () => {
     const { engine } = freshStore()
@@ -131,6 +136,15 @@ describe('readerStore', () => {
     expect(engine.speakCalls[engine.speakCalls.length - 1].text).toBe('第二章')
   })
 
+  it('seekTo 到最后一句后播放从最后一句开始', () => {
+    const { engine } = freshStore()
+    useReaderStore.getState().togglePlay()
+    engine.speakCalls[0].onend()
+    useReaderStore.getState().seekTo('s5')
+    useReaderStore.getState().togglePlay()
+    expect(engine.speakCalls[engine.speakCalls.length - 1].text).toBe('继续。')
+  })
+
   it('toggleSkipTable 重建可朗读列表并保持当前句', () => {
     const doc = parseDocument('# 标题\n正文。\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n结尾。')
     useReaderStore.setState({ settings: { rate: 1, volume: 1, skipCode: true, skipTable: true } })
@@ -141,13 +155,25 @@ describe('readerStore', () => {
     const state = useReaderStore.getState()
     expect(state.speakableIds).toEqual(['s1', 's2', 's3', 's4', 's5'])
     expect(state.currentIndex).toBe(1)
-})
+  })
 
-  it('seekTo 到最后一句后播放从最后一句开始', () => {
+  it('自然播完后 togglePlay 从头重播', () => {
     const { engine } = freshStore()
     useReaderStore.getState().togglePlay()
-    engine.speakCalls[0].onend()
-    useReaderStore.getState().seekTo('s5')
+    playToEnd(engine)
+    expect(useReaderStore.getState().currentIndex).toBe(4)
+    expect(useReaderStore.getState().isPlaying).toBe(false)
     useReaderStore.getState().togglePlay()
-    expect(engine.speakCalls[engine.speakCalls.length - 1].text).toBe('继续。')
+    expect(engine.speakCalls[engine.speakCalls.length - 1].text).toBe('第一章')
+  })
+
+  it('自然播完后 seekTo 再播放从目标句开始', () => {
+    const { engine } = freshStore()
+    useReaderStore.getState().togglePlay()
+    playToEnd(engine)
+    useReaderStore.getState().seekTo('s3')
+    useReaderStore.getState().togglePlay()
+    expect(useReaderStore.getState().currentIndex).toBe(2)
+    expect(engine.speakCalls[engine.speakCalls.length - 1].text).toBe('世界！')
+  })
 })

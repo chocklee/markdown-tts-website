@@ -74,6 +74,13 @@ export class SpeechQueue {
     this.state = 'idle'
   }
 
+  reposition(index: number): void {
+    this.epoch += 1
+    this.engine.cancel()
+    this.index = index
+    this.state = 'idle'
+  }
+
   private speakCurrent(): void {
     const epoch = this.epoch
     if (this.index >= this.texts.length) {

@@ -144,14 +144,14 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     const { speakableIds, queue } = get()
     const target = speakableIds.indexOf(sentenceId)
     if (target < 0) return
-    queue?.stop()
+    queue?.reposition(target)
     set({ currentIndex: target, isPlaying: false })
   },
 
   restoreIndex: (sentenceId) => {
     const target = get().speakableIds.indexOf(sentenceId)
     if (target >= 0) {
-      get().queue?.stop()
+      get().queue?.reposition(target)
       set({ currentIndex: target, isPlaying: false })
     }
   },
