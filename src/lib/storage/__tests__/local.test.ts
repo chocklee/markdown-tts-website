@@ -22,3 +22,8 @@ describe('local storage', () => {
     expect(loadPosition('doc-2')).toBeNull()
   })
 })
+
+  it('损坏的 JSON 返回 null', () => {
+    localStorage.setItem('mtts:doc', '{broken')
+    expect(loadDocument()).toBeNull()
+})

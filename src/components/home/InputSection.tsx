@@ -1,7 +1,7 @@
 'use client'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { hashContent, parseDocument } from '@/lib/markdown/parse'
+import { parseDocument } from '@/lib/markdown/parse'
 import { saveDocument } from '@/lib/storage/local'
 
 const MAX_SIZE = 5 * 1024 * 1024
@@ -12,6 +12,8 @@ export default function InputSection() {
   const [text, setText] = useState('')
   const [fileName, setFileName] = useState('')
   const [error, setError] = useState('')
+  const [reading, setReading] = useState(false)
+  const readingFileRef = useRef<File | null>(null)
 
   function handleFile(file: File | undefined) {
     if (!file) return
@@ -21,23 +23,47 @@ export default function InputSection() {
       return
     }
     if (!/\.md$/i.test(file.name) && file.type !== 'text/markdown' && file.type !== 'text/plain') {
-      setError('请选择 .md 文件')
+      setError('请选择 Markdown 或文本文件')
       return
     }
-    setFileName(file.name.replace(/\.md$/i, ''))
+    setFileName(file.name.replace(/\.[^.]*$/, ''))
+    setReading(true)
+    readingFileRef.current = file
     const reader = new FileReader()
-    reader.onload = () => setText(String(reader.result ?? ''))
+    reader.onload = () => {
+      if (readingFileRef.current !== file) return
+      setText(String(reader.result ?? ''))
+      setReading(false)
+    }
+    reader.onerror = () => {
+      if (readingFileRef.current !== file) return
+      setError('文件读取失败')
+      setReading(false)
+    }
     reader.readAsText(file, 'utf-8')
   }
 
   function start() {
+    if (reading) {
+      setError('文件读取中，请稍候')
+      return
+    }
     const content = text.trim()
     if (!content) {
       setError('请粘贴内容或选择文件')
       return
     }
+    if (content.length > MAX_SIZE) {
+      setError('内容超过 5MB 上限')
+      return
+    }
     const doc = parseDocument(content, fileName || '未命名文档')
-    saveDocument({ id: doc.id, title: doc.title, content, savedAt: Date.now() })
+    try {
+      saveDocument({ id: doc.id, title: doc.title, content, savedAt: Date.now() })
+    } catch {
+      setError('保存失败，内容过大')
+      return
+    }
     router.push('/reader')
   }
 
@@ -64,13 +90,17 @@ export default function InputSection() {
           <button
             type="button"
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
-            onClick={() => fileRef.current?.click()}
+            onClick={() => {
+              if (fileRef.current) fileRef.current.value = ''
+              fileRef.current?.click()
+            }}
           >
             上传 .md 文件
           </button>
           <button
             type="button"
-            className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            disabled={reading}
             onClick={start}
           >
             开始收听
