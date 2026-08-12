@@ -116,3 +116,26 @@ describe('SpeechQueue', () => {
     expect(queue.isIdle()).toBe(true)
   })
 })
+
+  it('reposition 重置索引回到 idle 并忽略旧回调', () => {
+    const { engine, queue, onIndex } = setup(['a。', 'b。'])
+    queue.playFrom(0)
+    queue.reposition(1)
+    expect(queue.isIdle()).toBe(true)
+    expect(queue.currentIndex).toBe(1)
+    engine.speakCalls[0].onend()
+    expect(onIndex).toHaveBeenCalledTimes(1)
+    expect(engine.speakCalls).toHaveLength(1)
+  })
+
+  it('ended 仅在自然播完后为真', () => {
+    const { engine, queue } = setup(['a。'])
+    expect(queue.ended).toBe(false)
+    queue.playFrom(0)
+    queue.stop()
+    expect(queue.ended).toBe(false)
+    queue.reposition(0)
+    queue.playFrom(0)
+    engine.speakCalls[engine.speakCalls.length - 1].onend()
+    expect(queue.ended).toBe(true)
+})
