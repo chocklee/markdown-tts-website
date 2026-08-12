@@ -13,6 +13,7 @@ export class SpeechQueue {
   private callbacks: SpeechCallbacks
   private index = 0
   private state: 'idle' | 'playing' | 'paused' = 'idle'
+  private epoch = 0
 
   constructor(
     engine: TtsEngine,
@@ -35,6 +36,7 @@ export class SpeechQueue {
   }
 
   playFrom(startIndex: number): void {
+    this.epoch += 1
     this.engine.cancel()
     this.index = startIndex
     this.state = 'playing'
@@ -63,11 +65,13 @@ export class SpeechQueue {
   }
 
   stop(): void {
+    this.epoch += 1
     this.engine.cancel()
     this.state = 'idle'
   }
 
   private speakCurrent(): void {
+    const epoch = this.epoch
     if (this.index >= this.texts.length) {
       this.state = 'idle'
       this.callbacks.onEnd()
@@ -79,10 +83,12 @@ export class SpeechQueue {
       rate,
       volume,
       onend: () => {
+        if (epoch !== this.epoch) return
         this.index += 1
         this.speakCurrent()
       },
       onerror: (error) => {
+        if (epoch !== this.epoch) return
         this.state = 'idle'
         this.callbacks.onError(error instanceof Error ? error.message : String(error))
       },

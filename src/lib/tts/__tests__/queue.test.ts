@@ -3,12 +3,12 @@ import { SpeechQueue } from '../queue'
 import type { TtsEngine } from '../engine'
 
 class FakeEngine implements TtsEngine {
-  speakCalls: { text: string; rate: number; volume: number; onend: () => void }[] = []
+  speakCalls: { text: string; rate: number; volume: number; onend: () => void; onerror: (e: unknown) => void }[] = []
   paused = false
   cancelled = false
 
   speak(text: string, opts: { rate: number; volume: number; onend: () => void; onerror: (e: unknown) => void }): void {
-    this.speakCalls.push({ text, rate: opts.rate, volume: opts.volume, onend: opts.onend })
+    this.speakCalls.push({ text, rate: opts.rate, volume: opts.volume, onend: opts.onend, onerror: opts.onerror })
   }
   pause(): void { this.paused = true }
   resume(): void { this.paused = false }
@@ -69,5 +69,50 @@ describe('SpeechQueue', () => {
     queue.playFrom(0)
     expect(engine.speakCalls[0].rate).toBe(1.5)
     expect(engine.speakCalls[0].volume).toBe(0.5)
+  })
+
+  it('stop 后忽略旧 utterance 的回调', () => {
+    const { engine, queue, onEnd, onIndex } = setup(['a。', 'b。'])
+    queue.playFrom(0)
+    queue.stop()
+    engine.speakCalls[0].onend()
+    expect(onIndex).toHaveBeenCalledTimes(1)
+    expect(onEnd).not.toHaveBeenCalled()
+    expect(engine.speakCalls).toHaveLength(1)
+  })
+
+  it('重新播放时忽略旧 utterance 回调', () => {
+    const { engine, queue, onIndex } = setup(['a。', 'b。', 'c。'])
+    queue.playFrom(0)
+    queue.playFrom(2)
+    engine.speakCalls[0].onend()
+    expect(onIndex).toHaveBeenLastCalledWith(2)
+    expect(engine.speakCalls).toHaveLength(2)
+  })
+
+  it('合成错误触发 onError 并回到 idle', () => {
+    const { engine, queue, onError } = setup(['a。'])
+    queue.playFrom(0)
+    engine.speakCalls[0].onerror(new Error('语音合成失败'))
+    expect(onError).toHaveBeenCalledWith('语音合成失败')
+    expect(queue.isIdle()).toBe(true)
+  })
+
+  it('resumeOrStart 在暂停时恢复当前句', () => {
+    const { engine, queue } = setup(['a。'])
+    queue.playFrom(0)
+    queue.pause()
+    queue.resumeOrStart(0)
+    expect(engine.paused).toBe(false)
+    expect(engine.speakCalls).toHaveLength(1)
+  })
+
+  it('isIdle 反映队列状态', () => {
+    const { queue } = setup(['a。'])
+    expect(queue.isIdle()).toBe(true)
+    queue.playFrom(0)
+    expect(queue.isIdle()).toBe(false)
+    queue.stop()
+    expect(queue.isIdle()).toBe(true)
   })
 })

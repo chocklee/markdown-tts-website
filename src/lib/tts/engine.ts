@@ -15,7 +15,6 @@ export interface TtsEngine {
 
 export class BrowserTtsEngine implements TtsEngine {
   private synth: SpeechSynthesis | null = null
-  private current: SpeechSynthesisUtterance | null = null
 
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -34,8 +33,11 @@ export class BrowserTtsEngine implements TtsEngine {
     utterance.rate = options.rate
     utterance.volume = options.volume
     utterance.onend = () => options.onend()
-    utterance.onerror = () => options.onerror(new Error('语音合成失败'))
-    this.current = utterance
+    utterance.onerror = (event) => {
+      const code = (event as SpeechSynthesisErrorEvent).error
+      if (code === 'interrupted' || code === 'canceled') return
+      options.onerror(new Error('语音合成失败'))
+    }
     this.synth.speak(utterance)
   }
 
