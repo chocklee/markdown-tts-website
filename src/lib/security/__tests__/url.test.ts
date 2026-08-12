@@ -12,4 +12,9 @@ describe('sanitizeUrl', () => {
   it('拒绝 javascript: 协议', () => {
     expect(sanitizeUrl('javascript:alert(1)')).toBeNull()
   })
+
+  it('data:image 仅放行栅格格式', () => {
+    expect(sanitizeUrl('data:image/png;base64,AAA')).toBe('data:image/png;base64,AAA')
+    expect(sanitizeUrl('data:image/svg+xml;base64,AAA')).toBeNull()
+  })
 })

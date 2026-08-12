@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+mark {
+  background-color: transparent;
+  color: inherit;
+}
+
 mark.current-sentence {
   background: #fde68a;
   border-radius: 2px;

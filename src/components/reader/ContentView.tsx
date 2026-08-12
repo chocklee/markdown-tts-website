@@ -133,6 +133,8 @@ function BlockContent({
 
 function HighlightDriver({ containerRef }: { containerRef: RefObject<HTMLDivElement | null> }) {
   const activeSentenceId = useReaderStore((s) => s.speakableIds[s.currentIndex] ?? null)
+  const skipCode = useReaderStore((s) => s.settings.skipCode)
+  const skipTable = useReaderStore((s) => s.settings.skipTable)
   const firstRun = useRef(true)
 
   useEffect(() => {
@@ -153,7 +155,7 @@ function HighlightDriver({ containerRef }: { containerRef: RefObject<HTMLDivElem
       return
     }
     target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [activeSentenceId, containerRef])
+  }, [activeSentenceId, skipCode, skipTable, containerRef])
 
   return null
 }

@@ -75,6 +75,11 @@ describe('ContentView', () => {
     expect(scrollSpy.mock.instances[0]).toHaveAttribute('data-sent', 's3')
   })
 
+  it('朗读代码块时块级锚点获得高亮', () => {
+    renderWithStore(4, { skipCode: false })
+    expect(document.querySelector('pre[data-sent-block]')?.className).toContain('current-sentence')
+  })
+
   it('嵌套列表内容渲染并参与句子编号', () => {
     const doc = parseDocument('- 第一项。\n  - 嵌套项。')
     useReaderStore.setState({
