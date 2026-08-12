@@ -11,6 +11,7 @@ export default function InputSection() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
   const [fileName, setFileName] = useState('')
+  const [fileLabel, setFileLabel] = useState('')
   const [error, setError] = useState('')
   const [reading, setReading] = useState(false)
   const readingFileRef = useRef<File | null>(null)
@@ -27,6 +28,7 @@ export default function InputSection() {
       return
     }
     setFileName(file.name.replace(/\.[^.]*$/, ''))
+    setFileLabel(file.name)
     setReading(true)
     readingFileRef.current = file
     const reader = new FileReader()
@@ -106,7 +108,7 @@ export default function InputSection() {
             开始收听
           </button>
         </div>
-        {fileName && <p className="mt-2 text-xs text-slate-400">文件：{fileName}.md</p>}
+        {fileLabel && <p className="mt-2 text-xs text-slate-400">文件：{fileLabel}</p>}
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </div>
     </div>
