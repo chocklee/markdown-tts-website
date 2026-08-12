@@ -22,4 +22,8 @@ describe('splitSentences', () => {
     expect(splitSentences('   \n  ')).toEqual([])
     expect(splitSentences('  你好。  世界！ ')).toEqual(['你好。', '世界！'])
   })
+
+  it('连续句末标点并入同一句', () => {
+    expect(splitSentences('你好！！')).toEqual(['你好！！'])
+  })
 })
