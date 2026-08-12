@@ -36,11 +36,21 @@ export default function ReaderPage() {
     const unsubscribe = useReaderStore.subscribe((state) => {
       const id = state.speakableIds[state.currentIndex]
       if (id && state.document?.id === doc.id) {
-        savePosition(doc.id, id)
+        try {
+          savePosition(doc.id, id)
+        } catch {
+          // 存储不可用（如私密模式）时静默忽略
+        }
       }
     })
     return unsubscribe
   }, [doc])
+
+  useEffect(() => {
+    return () => {
+      useReaderStore.getState().stop()
+    }
+  }, [])
 
   if (!doc) {
     return <div className="p-10 text-center text-slate-400">加载中…</div>

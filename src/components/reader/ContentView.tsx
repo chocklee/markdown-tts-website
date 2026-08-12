@@ -133,6 +133,7 @@ function BlockContent({
 
 function HighlightDriver({ containerRef }: { containerRef: RefObject<HTMLDivElement | null> }) {
   const activeSentenceId = useReaderStore((s) => s.speakableIds[s.currentIndex] ?? null)
+  const firstSentenceId = useReaderStore((s) => s.speakableIds[0] ?? null)
   const skipCode = useReaderStore((s) => s.settings.skipCode)
   const skipTable = useReaderStore((s) => s.settings.skipTable)
   const firstRun = useRef(true)
@@ -152,10 +153,13 @@ function HighlightDriver({ containerRef }: { containerRef: RefObject<HTMLDivElem
     target.classList.add('current-sentence')
     if (firstRun.current) {
       firstRun.current = false
+      if (activeSentenceId && activeSentenceId !== firstSentenceId) {
+        target.scrollIntoView({ behavior: 'auto', block: 'center' })
+      }
       return
     }
     target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [activeSentenceId, skipCode, skipTable, containerRef])
+  }, [activeSentenceId, firstSentenceId, skipCode, skipTable, containerRef])
 
   return null
 }
