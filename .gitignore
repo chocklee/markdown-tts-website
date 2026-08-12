@@ -4,3 +4,9 @@ node_modules/
 .env
 .DS_Store
 .worktrees/
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+.eslintcache

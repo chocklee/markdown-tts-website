@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+mark.current-sentence {
+  background: #fde68a;
+  border-radius: 2px;
+}
