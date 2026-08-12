@@ -64,7 +64,7 @@ export function groupLeavesIntoSentences(
     for (const raw of rawPieces) {
       const piece = raw.trim()
       if (!piece) continue
-      if (ONLY_PUNCT_RE.test(piece) && sentences.length > 0) {
+      if (ONLY_PUNCT_RE.test(piece) && !current && sentences.length > 0) {
         sentences[sentences.length - 1].parts.push({ ...leaf, text: raw })
         continue
       }
