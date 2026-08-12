@@ -1,0 +1,38 @@
+export interface StoredDocument {
+  id: string
+  title: string
+  content: string
+  savedAt: number
+}
+
+const DOC_KEY = 'mtts:doc'
+const POS_KEY = 'mtts:pos'
+
+export function saveDocument(doc: StoredDocument): void {
+  localStorage.setItem(DOC_KEY, JSON.stringify(doc))
+}
+
+export function loadDocument(): StoredDocument | null {
+  const raw = localStorage.getItem(DOC_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as StoredDocument
+  } catch {
+    return null
+  }
+}
+
+export function savePosition(docId: string, sentenceId: string): void {
+  localStorage.setItem(POS_KEY, JSON.stringify({ docId, sentenceId }))
+}
+
+export function loadPosition(docId: string): string | null {
+  const raw = localStorage.getItem(POS_KEY)
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as { docId: string; sentenceId: string }
+    return parsed.docId === docId ? parsed.sentenceId : null
+  } catch {
+    return null
+  }
+}
