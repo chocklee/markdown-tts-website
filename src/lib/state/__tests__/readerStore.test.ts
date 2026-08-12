@@ -142,3 +142,12 @@ describe('readerStore', () => {
     expect(state.speakableIds).toEqual(['s1', 's2', 's3', 's4', 's5'])
     expect(state.currentIndex).toBe(1)
 })
+
+  it('seekTo 到最后一句后播放从最后一句开始', () => {
+    const { engine } = freshStore()
+    useReaderStore.getState().togglePlay()
+    engine.speakCalls[0].onend()
+    useReaderStore.getState().seekTo('s5')
+    useReaderStore.getState().togglePlay()
+    expect(engine.speakCalls[engine.speakCalls.length - 1].text).toBe('继续。')
+})

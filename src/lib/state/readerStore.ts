@@ -80,7 +80,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       set({ isPlaying: false })
       return
     }
-    if (queue.isIdle() && currentIndex >= speakableIds.length - 1) {
+    if (queue.isIdle() && queue.ended) {
       queue.playFrom(0)
     } else {
       queue.resumeOrStart(currentIndex)

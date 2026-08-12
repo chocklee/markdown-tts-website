@@ -35,6 +35,10 @@ export class SpeechQueue {
     return this.state === 'idle'
   }
 
+  get ended(): boolean {
+    return this.index >= this.texts.length
+  }
+
   playFrom(startIndex: number): void {
     this.epoch += 1
     this.engine.cancel()
