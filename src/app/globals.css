@@ -6,3 +6,8 @@ mark.current-sentence {
   background: #fde68a;
   border-radius: 2px;
 }
+
+[data-sent-block].current-sentence {
+  outline: 2px solid #fde68a;
+  outline-offset: 2px;
+}

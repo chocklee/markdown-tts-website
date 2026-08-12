@@ -1,3 +1,5 @@
+const DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp);/i
+
 export function sanitizeUrl(url: string): string | null {
   const trimmed = url.trim()
   if (
@@ -5,7 +7,7 @@ export function sanitizeUrl(url: string): string | null {
     trimmed.startsWith('https://') ||
     trimmed.startsWith('mailto:') ||
     trimmed.startsWith('#') ||
-    trimmed.startsWith('data:image/')
+    DATA_IMAGE_RE.test(trimmed)
   ) {
     return trimmed
   }

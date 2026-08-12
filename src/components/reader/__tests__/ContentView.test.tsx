@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
 import { ContentView } from '../ContentView'
 import { parseDocument } from '@/lib/markdown/parse'
 import { useReaderStore } from '@/lib/state/readerStore'
@@ -31,10 +31,14 @@ function renderWithStore(currentIndex: number, settingsOverride?: Partial<Reader
     queue: null,
     engine: null,
   })
-  render(<ContentView document={DOC} />)
+  return render(<ContentView document={DOC} />)
 }
 
 describe('ContentView', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('渲染标题、段落、代码块与表格', () => {
     renderWithStore(0, { skipCode: false, skipTable: false })
     expect(screen.getByText('如何高效学习')).toBeInTheDocument()
@@ -59,5 +63,31 @@ describe('ContentView', () => {
     useReaderStore.setState({ settings: { rate: 1, volume: 1, skipCode: true, skipTable: true } })
     render(<ContentView document={DOC} />)
     expect(screen.getByText('已跳过代码块，可在朗读设置中开启')).toBeInTheDocument()
+  })
+
+  it('当前句变化时滚动到对应句子', () => {
+    const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView')
+    renderWithStore(0)
+    act(() => {
+      useReaderStore.setState({ currentIndex: 2 })
+    })
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
+    expect(scrollSpy.mock.instances[0]).toHaveAttribute('data-sent', 's3')
+  })
+
+  it('嵌套列表内容渲染并参与句子编号', () => {
+    const doc = parseDocument('- 第一项。\n  - 嵌套项。')
+    useReaderStore.setState({
+      document: doc,
+      settings: { rate: 1, volume: 1, skipCode: true, skipTable: true },
+      speakableIds: doc.sentenceIds,
+      currentIndex: 0,
+      isPlaying: false,
+      queue: null,
+      engine: null,
+    })
+    render(<ContentView document={doc} />)
+    expect(screen.getByText('嵌套项。')).toBeInTheDocument()
+    expect(doc.sentenceIds).toHaveLength(2)
   })
 })

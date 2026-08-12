@@ -22,7 +22,10 @@ export function OutlinePanel({ document }: { document: ReaderDocument }) {
             <li key={chapter.id}>
               <button
                 type="button"
-                className={`w-full truncate rounded px-2 py-1 text-left text-sm ${
+                disabled={!firstId}
+                title={chapter.title}
+                aria-current={active ? 'true' : undefined}
+                className={`w-full truncate rounded px-2 py-1 text-left text-sm disabled:opacity-40 ${
                   active ? 'bg-blue-50 font-medium text-blue-700' : 'text-slate-700 hover:bg-slate-100'
                 }`}
                 onClick={() => {

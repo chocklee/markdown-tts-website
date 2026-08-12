@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import type { RefObject } from 'react'
 import type { RootContent } from 'mdast'
 import type { ReaderBlock, ReaderDocument } from '@/types/reader'
 import { flattenInline, groupLeavesIntoSentences, type StyledLeaf } from '@/lib/markdown/inline'
@@ -33,12 +34,10 @@ function InlineParts({ parts }: { parts: StyledLeaf[] }) {
 
 function BlockContent({
   block,
-  activeSentenceId,
   skipCode,
   skipTable,
 }: {
   block: ReaderBlock
-  activeSentenceId: string | null
   skipCode: boolean
   skipTable: boolean
 }) {
@@ -46,17 +45,13 @@ function BlockContent({
   const consumeId = () => {
     const id = block.sentenceIds[idIndex]
     idIndex += 1
-    return id
+    return id ?? `s-extra-${idIndex}`
   }
 
   const renderInline = (node: RootContent) => {
     const sentences = groupLeavesIntoSentences(flattenInline(node), consumeId)
     return sentences.map((sentence) => (
-      <mark
-        key={sentence.id}
-        data-sent={sentence.id}
-        className={sentence.id === activeSentenceId ? 'current-sentence' : 'bg-transparent'}
-      >
+      <mark key={sentence.id} data-sent={sentence.id}>
         <InlineParts parts={sentence.parts} />
       </mark>
     ))
@@ -98,7 +93,10 @@ function BlockContent({
         return <p className="my-3 rounded bg-slate-100 p-3 text-sm text-slate-400">已跳过代码块，可在朗读设置中开启</p>
       }
       return (
-        <pre className="my-3 overflow-x-auto rounded-lg bg-slate-900 p-4 text-sm text-slate-100">
+        <pre
+          data-sent-block={block.sentenceIds.join(' ')}
+          className="my-3 overflow-x-auto rounded-lg bg-slate-900 p-4 text-sm text-slate-100"
+        >
           <code>{block.text}</code>
         </pre>
       )
@@ -109,7 +107,7 @@ function BlockContent({
         return <p className="my-3 rounded bg-slate-100 p-3 text-sm text-slate-400">已跳过表格，可在朗读设置中开启</p>
       }
       return (
-        <div className="my-3 overflow-x-auto">
+        <div data-sent-block={block.sentenceIds.join(' ')} className="my-3 overflow-x-auto">
           <table className="border-collapse text-sm">
             <tbody>
               {node.children.map((row, i) => (
@@ -133,29 +131,50 @@ function BlockContent({
   }
 }
 
+function HighlightDriver({ containerRef }: { containerRef: RefObject<HTMLDivElement | null> }) {
+  const activeSentenceId = useReaderStore((s) => s.speakableIds[s.currentIndex] ?? null)
+  const firstRun = useRef(true)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    container
+      .querySelectorAll('mark.current-sentence, [data-sent-block].current-sentence')
+      .forEach((el) => el.classList.remove('current-sentence'))
+    if (!activeSentenceId) return
+    const escaped = CSS.escape(activeSentenceId)
+    const target =
+      container.querySelector(`mark[data-sent="${escaped}"]`) ??
+      container.querySelector(`[data-sent-block~="${escaped}"]`)
+    if (!target) return
+    target.classList.add('current-sentence')
+    if (firstRun.current) {
+      firstRun.current = false
+      return
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [activeSentenceId, containerRef])
+
+  return null
+}
+
 export function ContentView({ document }: { document: ReaderDocument }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const activeSentenceId = useReaderStore((s) => s.speakableIds[s.currentIndex] ?? null)
   const skipCode = useReaderStore((s) => s.settings.skipCode)
   const skipTable = useReaderStore((s) => s.settings.skipTable)
 
-  useEffect(() => {
-    if (!activeSentenceId) return
-    const el = containerRef.current?.querySelector(`[data-sent="${CSS.escape(activeSentenceId)}"]`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [activeSentenceId])
+  const blocks = useMemo(
+    () =>
+      document.blocks.map((block) => (
+        <BlockContent key={block.id} block={block} skipCode={skipCode} skipTable={skipTable} />
+      )),
+    [document, skipCode, skipTable],
+  )
 
   return (
     <div ref={containerRef}>
-      {document.blocks.map((block) => (
-        <BlockContent
-          key={block.id}
-          block={block}
-          activeSentenceId={activeSentenceId}
-          skipCode={skipCode}
-          skipTable={skipTable}
-        />
-      ))}
+      {blocks}
+      <HighlightDriver containerRef={containerRef} />
     </div>
   )
 }

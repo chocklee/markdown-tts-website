@@ -26,6 +26,7 @@ export function flattenInline(node: RootContent): StyledLeaf[] {
       return node.children.flatMap((c) => flattenInline(c))
     case 'delete':
       return node.children.flatMap((c) => flattenInline(c))
+    case 'list':
     case 'listItem':
     case 'paragraph':
     case 'blockquote':
