@@ -19,5 +19,5 @@ export function getSentenceText(doc: ReaderDocument, sentenceId: string): string
   const block = doc.blocks.find((b) => b.sentenceIds.includes(sentenceId))
   if (!block) return ''
   const index = block.sentenceIds.indexOf(sentenceId)
-  return block.sentenceTexts[index] ?? block.text
+  return block.sentenceTexts[index] ?? ''
 }

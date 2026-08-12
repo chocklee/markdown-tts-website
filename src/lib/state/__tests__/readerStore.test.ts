@@ -101,3 +101,44 @@ describe('readerStore', () => {
     expect(engine.speakCalls).toHaveLength(0)
   })
 })
+
+  it('seekTo 只定位不自动播放', () => {
+    const { engine } = freshStore()
+    useReaderStore.getState().seekTo('s3')
+    expect(useReaderStore.getState().currentIndex).toBe(2)
+    expect(useReaderStore.getState().isPlaying).toBe(false)
+    expect(engine.speakCalls).toHaveLength(0)
+  })
+
+  it('播放中 seekTo 定位后不受迟到 onend 影响', () => {
+    const { engine } = freshStore()
+    useReaderStore.getState().togglePlay()
+    engine.speakCalls[0].onend()
+    useReaderStore.getState().seekTo('s5')
+    expect(useReaderStore.getState().currentIndex).toBe(4)
+    expect(useReaderStore.getState().isPlaying).toBe(false)
+    engine.speakCalls[1].onend()
+    expect(useReaderStore.getState().currentIndex).toBe(4)
+  })
+
+  it('seekTo 后从目标句开始播放', () => {
+    const { engine } = freshStore()
+    useReaderStore.getState().togglePlay()
+    engine.speakCalls[0].onend()
+    useReaderStore.getState().seekTo('s4')
+    useReaderStore.getState().togglePlay()
+    expect(useReaderStore.getState().currentIndex).toBe(3)
+    expect(engine.speakCalls[engine.speakCalls.length - 1].text).toBe('第二章')
+  })
+
+  it('toggleSkipTable 重建可朗读列表并保持当前句', () => {
+    const doc = parseDocument('# 标题\n正文。\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n结尾。')
+    useReaderStore.setState({ settings: { rate: 1, volume: 1, skipCode: true, skipTable: true } })
+    useReaderStore.getState().init(doc, new FakeEngine())
+    expect(useReaderStore.getState().speakableIds).toEqual(['s1', 's2'])
+    useReaderStore.getState().seekTo('s2')
+    useReaderStore.getState().toggleSkipTable()
+    const state = useReaderStore.getState()
+    expect(state.speakableIds).toEqual(['s1', 's2', 's3', 's4', 's5'])
+    expect(state.currentIndex).toBe(1)
+})

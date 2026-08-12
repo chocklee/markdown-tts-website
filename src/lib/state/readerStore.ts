@@ -95,16 +95,18 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
 
   nextSentence: () => {
     const { speakableIds, currentIndex, queue } = get()
+    if (!queue || speakableIds.length === 0) return
     const next = Math.min(currentIndex + 1, speakableIds.length - 1)
-    if (!queue || next === currentIndex) return
+    if (next === currentIndex) return
     queue.playFrom(next)
     set({ isPlaying: true })
   },
 
   prevSentence: () => {
-    const { currentIndex, queue } = get()
+    const { speakableIds, currentIndex, queue } = get()
+    if (!queue || speakableIds.length === 0) return
     const prev = Math.max(currentIndex - 1, 0)
-    if (!queue || prev === currentIndex) return
+    if (prev === currentIndex) return
     queue.playFrom(prev)
     set({ isPlaying: true })
   },
@@ -141,29 +143,25 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   seekTo: (sentenceId) => {
     const { speakableIds, queue } = get()
     const target = speakableIds.indexOf(sentenceId)
-    if (target < 0 || !queue) return
-    set({ currentIndex: target })
+    if (target < 0) return
+    queue?.stop()
+    set({ currentIndex: target, isPlaying: false })
   },
 
   restoreIndex: (sentenceId) => {
     const target = get().speakableIds.indexOf(sentenceId)
-    if (target >= 0) set({ currentIndex: target })
+    if (target >= 0) {
+      get().queue?.stop()
+      set({ currentIndex: target, isPlaying: false })
+    }
   },
 
   setRate: (rate) => {
     set((s) => ({ settings: { ...s.settings, rate } }))
-    if (get().isPlaying) {
-      const { queue, currentIndex } = get()
-      queue?.playFrom(currentIndex)
-    }
   },
 
   setVolume: (volume) => {
     set((s) => ({ settings: { ...s.settings, volume } }))
-    if (get().isPlaying) {
-      const { queue, currentIndex } = get()
-      queue?.playFrom(currentIndex)
-    }
   },
 
   toggleSkipCode: () => {
