@@ -1,4 +1,5 @@
 import type { RootContent } from 'mdast'
+import { BOUNDARY_RE, ONLY_PUNCT_RE } from './sentenceize'
 
 export interface StyledLeaf {
   text: string
@@ -50,8 +51,6 @@ export interface SentenceWithParts {
 }
 
 const END_RE = /[。！？!?…」』”’.]$/
-const ONLY_PUNCT_RE = /^[。！？!?…」』”’.,，、;；:：]+$/
-const BOUNDARY_RE = /(?<=[。！？!?…」』”’.])\s*/
 
 export function groupLeavesIntoSentences(
   leaves: StyledLeaf[],

@@ -16,7 +16,11 @@ export function loadDocument(): StoredDocument | null {
   const raw = localStorage.getItem(DOC_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as StoredDocument
+    const parsed = JSON.parse(raw) as Partial<StoredDocument>
+    if (typeof parsed.id !== 'string' || typeof parsed.title !== 'string' || typeof parsed.content !== 'string') {
+      return null
+    }
+    return parsed as StoredDocument
   } catch {
     return null
   }

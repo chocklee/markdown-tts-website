@@ -16,7 +16,7 @@ export function buildChapters(blocks: ReaderBlock[]): Chapter[] {
         sentenceIds: [...block.sentenceIds],
       }
       chapters.push(current)
-    } else if (current && block.type !== 'heading') {
+    } else if (current && (block.type !== 'heading' || block.depth > 3)) {
       current.sentenceIds.push(...block.sentenceIds)
     }
   }

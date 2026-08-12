@@ -1,5 +1,5 @@
-const BOUNDARY_RE = /(?<=[。！？!?…」』”’.])\s*/
-const ONLY_PUNCT_RE = /^[。！？!?…」』”’.,，、;；:：]+$/
+export const BOUNDARY_RE = /(?<=[。！？!?…」』”’.])\s*/
+export const ONLY_PUNCT_RE = /^[。！？!?…」』”’.,，、;；:：]+$/
 
 export function splitSentences(text: string): string[] {
   const parts: string[] = []

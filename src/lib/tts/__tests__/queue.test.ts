@@ -115,7 +115,6 @@ describe('SpeechQueue', () => {
     queue.stop()
     expect(queue.isIdle()).toBe(true)
   })
-})
 
   it('reposition 重置索引回到 idle 并忽略旧回调', () => {
     const { engine, queue, onIndex } = setup(['a。', 'b。'])
@@ -138,4 +137,5 @@ describe('SpeechQueue', () => {
     queue.playFrom(0)
     engine.speakCalls[engine.speakCalls.length - 1].onend()
     expect(queue.ended).toBe(true)
+  })
 })

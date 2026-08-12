@@ -20,7 +20,7 @@ describe('buildChapters', () => {
     expect(buildChapters(blocks)).toEqual([])
   })
 
-  it('h1-h3 标题建立章节，h4 不建立', () => {
+  it('h1-h3 标题建立章节，h4 标题句归入当前章节', () => {
     const blocks = [
       block('b0', 'heading', ['s1'], 1),
       block('b1', 'paragraph', ['s2']),
@@ -30,7 +30,7 @@ describe('buildChapters', () => {
     const chapters = buildChapters(blocks)
     expect(chapters.map((c) => c.title)).toEqual(['', ''])
     expect(chapters[0].sentenceIds).toEqual(['s1', 's2'])
-    expect(chapters[1].sentenceIds).toEqual(['s3'])
+    expect(chapters[1].sentenceIds).toEqual(['s3', 's4'])
   })
 
   it('第一个标题之前的句子归入第一章', () => {
