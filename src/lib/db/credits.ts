@@ -171,3 +171,64 @@ export async function creditPurchase(
     client.release()
   }
 }
+
+export async function deductCredits(
+  userId: string,
+  amount: number,
+  ref: string,
+  meta: unknown,
+  description = '云端朗读',
+): Promise<boolean> {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const { rowCount } = await client.query(
+      'UPDATE users SET credits_balance = credits_balance - $1 WHERE id = $2 AND credits_balance >= $1',
+      [amount, userId],
+    )
+    if (rowCount === 0) {
+      await client.query('ROLLBACK')
+      return false
+    }
+    await client.query(
+      `INSERT INTO credit_transactions (user_id, amount, kind, ref, description, meta)
+       VALUES ($1, $2, 'consumption', $3, $4, $5)`,
+      [userId, -amount, ref, description, JSON.stringify(meta)],
+    )
+    await client.query('COMMIT')
+    return true
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+export async function refundCredits(
+  userId: string,
+  amount: number,
+  ref: string,
+  meta: unknown,
+  description = '合成失败退还积分',
+): Promise<void> {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query(
+      `INSERT INTO credit_transactions (user_id, amount, kind, ref, description, meta)
+       VALUES ($1, $2, 'adjustment', $3, $4, $5)`,
+      [userId, amount, ref, description, JSON.stringify(meta)],
+    )
+    await client.query('UPDATE users SET credits_balance = credits_balance + $1 WHERE id = $2', [
+      amount,
+      userId,
+    ])
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
+}
