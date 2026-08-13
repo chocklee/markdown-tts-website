@@ -147,4 +147,16 @@ describe('openaiProvider', () => {
     )
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  it('请求携带 AbortSignal 超时信号', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(audioResponse(new Uint8Array()))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('OPENAI_API_KEY', 'sk-test-123')
+
+    await openaiProvider.synthesize({ text: 'x', voice: 'alloy', rate: 1 })
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init.signal).toBeInstanceOf(AbortSignal)
+    expect(init.signal.aborted).toBe(false)
+  })
 })

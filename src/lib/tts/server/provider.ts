@@ -15,7 +15,7 @@ const providers: Record<string, TtsProvider> = {
 }
 
 export function getProvider(): TtsProvider {
-  const id = process.env.TTS_PROVIDER ?? CONFIG.tts.provider
+  const id = (process.env.TTS_PROVIDER ?? '').trim() || CONFIG.tts.provider
   const provider = providers[id]
   if (!provider) {
     throw new Error(`unknown tts provider: ${id}`)

@@ -22,4 +22,14 @@ describe('getProvider', () => {
     vi.stubEnv('TTS_PROVIDER', 'unknown')
     expect(() => getProvider()).toThrow('unknown tts provider')
   })
+
+  it('TTS_PROVIDER 为空串时回退到 CONFIG 默认（openai）', () => {
+    vi.stubEnv('TTS_PROVIDER', '')
+    expect(getProvider()).toBe(openaiProvider)
+  })
+
+  it('TTS_PROVIDER 为空白串时回退到 CONFIG 默认（openai）', () => {
+    vi.stubEnv('TTS_PROVIDER', '   ')
+    expect(getProvider().id).toBe('openai')
+  })
 })

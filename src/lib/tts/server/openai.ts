@@ -3,6 +3,7 @@ import { countChars } from './cost'
 
 const SPEECH_URL = 'https://api.openai.com/v1/audio/speech'
 const MODEL = 'gpt-4o-mini-tts'
+// gpt-4o-mini-tts $12/100万字符
 const COST_PER_MILLION_CHARS_USD = 12
 
 function clampSpeed(rate: number): number {
@@ -24,6 +25,7 @@ export const openaiProvider: TtsProvider = {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: AbortSignal.timeout(15000),
       body: JSON.stringify({
         model: MODEL,
         voice,
