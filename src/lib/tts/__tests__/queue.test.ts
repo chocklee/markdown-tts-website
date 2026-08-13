@@ -4,11 +4,15 @@ import type { TtsEngine } from '../engine'
 
 class FakeEngine implements TtsEngine {
   speakCalls: { text: string; rate: number; volume: number; onend: () => void; onerror: (e: unknown) => void }[] = []
+  prefetchCalls: { text: string; rate: number; volume: number }[] = []
   paused = false
   cancelled = false
 
   speak(text: string, opts: { rate: number; volume: number; onend: () => void; onerror: (e: unknown) => void }): void {
     this.speakCalls.push({ text, rate: opts.rate, volume: opts.volume, onend: opts.onend, onerror: opts.onerror })
+  }
+  prefetch(text: string, opts: { rate: number; volume: number }): void {
+    this.prefetchCalls.push({ text, rate: opts.rate, volume: opts.volume })
   }
   pause(): void { this.paused = true }
   resume(): void { this.paused = false }
@@ -204,4 +208,60 @@ describe('SpeechQueue', () => {
     engine.speakCalls[engine.speakCalls.length - 1].onend()
     expect(queue.ended).toBe(true)
   })
+  it('播放当前句时预取下一句 text 和 rate', () => {
+    const { engine, queue } = setup(['a。', 'b。', 'c。'])
+    queue.playFrom(0)
+    expect(engine.prefetchCalls).toHaveLength(1)
+    expect(engine.prefetchCalls[0].text).toBe('b。')
+    expect(engine.prefetchCalls[0].rate).toBe(1)
+    expect(engine.prefetchCalls[0].volume).toBe(1)
+  })
+
+  it('倒数第二句预取最后一句，最后一句不再预取', () => {
+    const { engine, queue } = setup(['a。', 'b。', 'c。'])
+    queue.playFrom(0)
+    engine.speakCalls[0].onend()
+    expect(engine.prefetchCalls).toHaveLength(2)
+    expect(engine.prefetchCalls[1].text).toBe('c。')
+
+    engine.speakCalls[1].onend()
+    expect(engine.speakCalls).toHaveLength(3)
+    expect(engine.prefetchCalls).toHaveLength(2)
+    expect(engine.prefetchCalls[1].text).toBe('c。')
+  })
+
+  it('只有一句时不预取', () => {
+    const { engine, queue } = setup(['a。'])
+    queue.playFrom(0)
+    expect(engine.speakCalls).toHaveLength(1)
+    expect(engine.prefetchCalls).toHaveLength(0)
+  })
+
+  it('逐句暂停期间不额外预取，恢复继续播放时再预取', () => {
+    vi.useFakeTimers()
+    try {
+      const engine = new FakeEngine()
+      const queue = new SpeechQueue(
+        engine,
+        ['a。', 'b。', 'c。'],
+        () => ({ rate: 1, volume: 1, sentencePause: true, sentencePauseSeconds: 2 }),
+        { onIndex: vi.fn(), onEnd: vi.fn(), onError: vi.fn() },
+      )
+      queue.playFrom(0)
+      expect(engine.prefetchCalls).toHaveLength(1)
+      expect(engine.prefetchCalls[0].text).toBe('b。')
+
+      engine.speakCalls[0].onend()
+      vi.advanceTimersByTime(1999)
+      expect(engine.prefetchCalls).toHaveLength(1)
+
+      vi.advanceTimersByTime(1)
+      expect(engine.speakCalls).toHaveLength(2)
+      expect(engine.prefetchCalls).toHaveLength(2)
+      expect(engine.prefetchCalls[1].text).toBe('c。')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
 })

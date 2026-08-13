@@ -139,6 +139,13 @@ export class SpeechQueue {
         this.callbacks.onError(error instanceof Error ? error.message : String(error))
       },
     })
+    this.prefetchNext(opts)
+  }
+
+  private prefetchNext(opts: SpeechOptions): void {
+    const nextIndex = this.index + 1
+    if (nextIndex >= this.texts.length) return
+    this.engine.prefetch?.(this.texts[nextIndex], { rate: opts.rate, volume: opts.volume })
   }
 
   private clearPauseTimer(): void {

@@ -5,6 +5,20 @@ interface SynthesizeResponse {
   contentType: string
 }
 
+interface PrefetchedAudio {
+  text: string
+  rate: number
+  blob: Blob
+  objectUrl: string
+}
+
+interface PrefetchRequest {
+  text: string
+  rate: number
+  promise: Promise<void>
+  claimed: boolean
+}
+
 function base64ToBytes(base64: string): Uint8Array {
   const binary = atob(base64)
   const bytes = new Uint8Array(binary.length)
@@ -24,54 +38,82 @@ export class CloudTtsEngine implements TtsEngine {
   private objectUrl: string | null = null
   private paused = false
   private epoch = 0
+  private prefetchEpoch = 0
+  private prefetched: PrefetchedAudio | null = null
+  private prefetchRequest: PrefetchRequest | null = null
 
   constructor(voice: string) {
     this.voice = voice
   }
 
+  prefetch(text: string, options: Pick<SpeakOptions, 'rate' | 'volume'>): void {
+    const rate = options.rate
+    if (
+      (this.prefetchRequest && this.prefetchRequest.text === text && this.prefetchRequest.rate === rate) ||
+      (this.prefetched && this.prefetched.text === text && this.prefetched.rate === rate)
+    ) {
+      return
+    }
+    this.clearPrefetched()
+    const prefetchEpoch = ++this.prefetchEpoch
+    const request: PrefetchRequest = { text, rate, promise: Promise.resolve(), claimed: false }
+    const promise = this.fetchAudio(text, rate)
+      .then((data) => {
+        if (prefetchEpoch !== this.prefetchEpoch && !request.claimed) return
+        const blob = new Blob([base64ToBytes(data.audio)], { type: data.contentType })
+        const objectUrl = URL.createObjectURL(blob)
+        this.prefetched = { text, rate, blob, objectUrl }
+      })
+      .catch((error) => {
+        if (request.claimed) throw error
+      })
+    request.promise = promise
+    this.prefetchRequest = request
+    promise
+      .finally(() => {
+        if (this.prefetchRequest === request) this.prefetchRequest = null
+      })
+      .catch(() => {})
+  }
+
   speak(text: string, options: SpeakOptions): void {
+    if (this.prefetched && this.prefetched.text === text && this.prefetched.rate === options.rate) {
+      const objectUrl = this.prefetched.objectUrl
+      this.prefetched = null
+      this.playObjectUrl(objectUrl, options)
+      return
+    }
+    if (this.prefetchRequest && this.prefetchRequest.text === text && this.prefetchRequest.rate === options.rate) {
+      const request = this.prefetchRequest
+      const epoch = this.epoch
+      request.claimed = true
+      request.promise.then(
+        () => {
+          if (epoch !== this.epoch) return
+          if (this.prefetched && this.prefetched.text === text && this.prefetched.rate === options.rate) {
+            const objectUrl = this.prefetched.objectUrl
+            this.prefetched = null
+            this.playObjectUrl(objectUrl, options)
+          } else {
+            options.onerror(new Error('语音合成失败，请稍后再试'))
+          }
+        },
+        (error) => {
+          if (epoch !== this.epoch) return
+          options.onerror(error)
+        },
+      )
+      return
+    }
+    this.prefetchEpoch += 1
     this.cancel()
     const epoch = this.epoch
-
-    fetch('/api/tts/synthesize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voice: this.voice, rate: options.rate }),
-    })
-      .then(async (res) => {
-        if (res.ok) {
-          return (await res.json()) as SynthesizeResponse
-        }
-        if (res.status === 402) {
-          throw new Error('积分不足，请购买积分')
-        }
-        const body = (await res.json().catch(() => null)) as { error?: unknown } | null
-        throw new Error(typeof body?.error === 'string' ? body.error : '语音合成失败，请稍后再试')
-      })
+    this.fetchAudio(text, options.rate)
       .then((data) => {
         if (epoch !== this.epoch) return
         const blob = new Blob([base64ToBytes(data.audio)], { type: data.contentType })
-        const url = URL.createObjectURL(blob)
-        const audio = new Audio(url)
-        this.audio = audio
-        this.objectUrl = url
-        audio.volume = options.volume
-        audio.onended = () => {
-          if (this.audio === audio) {
-            this.audio = null
-            this.revokeUrl()
-          }
-          options.onend()
-        }
-        audio.onerror = () => {
-          if (epoch !== this.epoch) return
-          options.onerror(new Error('语音合成失败'))
-        }
-        if (this.paused) return
-        audio.play().catch((error) => {
-          if (epoch !== this.epoch || isAbortError(error)) return
-          options.onerror(error)
-        })
+        const objectUrl = URL.createObjectURL(blob)
+        this.playObjectUrl(objectUrl, options)
       })
       .catch((error) => {
         if (epoch !== this.epoch) return
@@ -96,22 +138,73 @@ export class CloudTtsEngine implements TtsEngine {
 
   cancel(): void {
     this.epoch += 1
+    this.prefetchEpoch += 1
     this.paused = false
     if (this.audio) {
       this.audio.pause()
       this.audio = null
     }
     this.revokeUrl()
+    this.clearPrefetched()
+    this.prefetchRequest = null
   }
 
   get isSpeaking(): boolean {
     return this.audio !== null && !this.audio.paused && !this.audio.ended
   }
 
+  private fetchAudio(text: string, rate: number): Promise<SynthesizeResponse> {
+    return fetch('/api/tts/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voice: this.voice, rate }),
+    }).then(async (res) => {
+      if (res.ok) {
+        return (await res.json()) as SynthesizeResponse
+      }
+      if (res.status === 402) {
+        throw new Error('积分不足，请购买积分')
+      }
+      const body = (await res.json().catch(() => null)) as { error?: unknown } | null
+      throw new Error(typeof body?.error === 'string' ? body.error : '语音合成失败，请稍后再试')
+    })
+  }
+
+  private playObjectUrl(objectUrl: string, options: SpeakOptions): void {
+    const epoch = this.epoch
+    const audio = new Audio(objectUrl)
+    this.audio = audio
+    this.objectUrl = objectUrl
+    audio.volume = options.volume
+    audio.onended = () => {
+      if (this.audio === audio) {
+        this.audio = null
+        this.revokeUrl()
+      }
+      options.onend()
+    }
+    audio.onerror = () => {
+      if (epoch !== this.epoch) return
+      options.onerror(new Error('语音合成失败'))
+    }
+    if (this.paused) return
+    audio.play().catch((error) => {
+      if (epoch !== this.epoch || isAbortError(error)) return
+      options.onerror(error)
+    })
+  }
+
   private revokeUrl(): void {
     if (this.objectUrl) {
       URL.revokeObjectURL(this.objectUrl)
       this.objectUrl = null
+    }
+  }
+
+  private clearPrefetched(): void {
+    if (this.prefetched) {
+      URL.revokeObjectURL(this.prefetched.objectUrl)
+      this.prefetched = null
     }
   }
 }

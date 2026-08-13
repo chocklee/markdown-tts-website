@@ -333,4 +333,163 @@ describe('CloudTtsEngine', () => {
     expect((onerror.mock.calls[0][0] as Error).message).toBe('play failed')
     expect(onend).not.toHaveBeenCalled()
   })
+  it('prefetch 后 speak 同 text+rate 直接消费预取音频，只发一次请求', async () => {
+    const fetchMock = mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    engine.prefetch('你好', { rate: 1.2, volume: 0.5 })
+    await flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith('/api/tts/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: '你好', voice: 'nova', rate: 1.2 }),
+    })
+    expect(MockAudio.instances).toHaveLength(0)
+
+    const onend = vi.fn()
+    const onerror = vi.fn()
+    engine.speak('你好', { rate: 1.2, volume: 0.8, onend, onerror })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(MockAudio.instances).toHaveLength(1)
+    const audio = MockAudio.instances[0]
+    expect(audio.play).toHaveBeenCalledOnce()
+    expect(engine.isSpeaking).toBe(true)
+
+    audio.fireEnded()
+    expect(onend).toHaveBeenCalledOnce()
+    expect(onerror).not.toHaveBeenCalled()
+    expect(revokeObjectURL).toHaveBeenCalledWith(MOCK_AUDIO_URL)
+  })
+
+  it('prefetch 后 speak 不同 text 走正常路径，不误用预取音频', async () => {
+    const fetchMock = mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    engine.prefetch('下一句', { rate: 1, volume: 1 })
+    await flush()
+
+    engine.speak('当前句', { rate: 1, volume: 1, onend: vi.fn(), onerror: vi.fn() })
+    await flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(MockAudio.instances).toHaveLength(1)
+    expect(MockAudio.instances[0].play).toHaveBeenCalledOnce()
+    expect(revokeObjectURL).toHaveBeenCalledWith(MOCK_AUDIO_URL)
+  })
+
+  it('prefetch 后 speak 同 text 不同 rate 走正常路径', async () => {
+    const fetchMock = mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    engine.prefetch('你好', { rate: 1, volume: 1 })
+    await flush()
+
+    engine.speak('你好', { rate: 1.5, volume: 1, onend: vi.fn(), onerror: vi.fn() })
+    await flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tts/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: '你好', voice: 'nova', rate: 1.5 }),
+    })
+    expect(MockAudio.instances).toHaveLength(1)
+  })
+
+  it('prefetch 在途时 speak 同 text 挂接请求，resolve 后立即播放', async () => {
+    const fetchMock = mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    const onend = vi.fn()
+    const onerror = vi.fn()
+    engine.prefetch('你好', { rate: 1, volume: 1 })
+    engine.speak('你好', { rate: 1, volume: 1, onend, onerror })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(MockAudio.instances).toHaveLength(0)
+
+    await flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(MockAudio.instances).toHaveLength(1)
+    const audio = MockAudio.instances[0]
+    expect(audio.play).toHaveBeenCalledOnce()
+    expect(engine.isSpeaking).toBe(true)
+
+    audio.fireEnded()
+    expect(onend).toHaveBeenCalledOnce()
+    expect(onerror).not.toHaveBeenCalled()
+  })
+
+  it('prefetch 在途时 cancel 使预取失效，响应到达后不创建音频', async () => {
+    mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    engine.prefetch('你好', { rate: 1, volume: 1 })
+
+    engine.cancel()
+    await flush()
+
+    expect(MockAudio.instances).toHaveLength(0)
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(engine.isSpeaking).toBe(false)
+  })
+
+  it('prefetch 失败静默，随后 speak 同句走正常路径报错', async () => {
+    const fetchMock = mockFetchResolved(500, {})
+    const engine = new CloudTtsEngine('nova')
+    const onerror = vi.fn()
+    engine.prefetch('你好', { rate: 1, volume: 1 })
+    await flush()
+
+    expect(MockAudio.instances).toHaveLength(0)
+    expect(createObjectURL).not.toHaveBeenCalled()
+
+    engine.speak('你好', { rate: 1, volume: 1, onend: vi.fn(), onerror })
+    await flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(onerror).toHaveBeenCalledTimes(1)
+    expect((onerror.mock.calls[0][0] as Error).message).toBe('语音合成失败，请稍后再试')
+  })
+
+  it('重复 prefetch 同 text+rate 去重，只发一次请求', async () => {
+    const fetchMock = mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    engine.prefetch('你好', { rate: 1, volume: 1 })
+    engine.prefetch('你好', { rate: 1, volume: 0.6 })
+    engine.prefetch('你好', { rate: 1, volume: 1 })
+
+    await flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('消费预取后 cancel 只 revoke 一次，无重复释放', async () => {
+    mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    engine.prefetch('你好', { rate: 1, volume: 1 })
+    await flush()
+
+    engine.speak('你好', { rate: 1, volume: 1, onend: vi.fn(), onerror: vi.fn() })
+    const audio = MockAudio.instances[0]
+
+    engine.cancel()
+
+    expect(audio.pause).toHaveBeenCalledOnce()
+    expect(revokeObjectURL).toHaveBeenCalledTimes(1)
+    expect(revokeObjectURL).toHaveBeenCalledWith(MOCK_AUDIO_URL)
+  })
+
+  it('volume 不参与预取匹配，播放时应用 speak 的 volume', async () => {
+    const fetchMock = mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    engine.prefetch('你好', { rate: 1, volume: 0.5 })
+    await flush()
+
+    engine.speak('你好', { rate: 1, volume: 0.9, onend: vi.fn(), onerror: vi.fn() })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(MockAudio.instances).toHaveLength(1)
+    expect(MockAudio.instances[0].volume).toBe(0.9)
+  })
+
 })
