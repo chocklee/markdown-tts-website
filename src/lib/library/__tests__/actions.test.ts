@@ -38,6 +38,14 @@ describe('文档操作层', () => {
     expect((await listDocuments()).length).toBe(1)
   })
 
+  it('保存覆盖软删除文档时恢复为活跃', async () => {
+    const doc = await saveDocumentToLibrary({ title: 't', content: 'c' })
+    await softDeleteDocument(doc.docId)
+    const revived = await saveDocumentToLibrary({ docId: doc.docId, title: 't2', content: 'c2' })
+    expect(revived.deletedAt).toBeNull()
+    expect(revived.deleteExpiresAt).toBeNull()
+  })
+
   it('重命名不改变 docId 与内容', async () => {
     const doc = await saveDocumentToLibrary({ title: '旧名', content: '内容' })
     await renameDocument(doc.docId, '新名')
@@ -58,18 +66,36 @@ describe('文档操作层', () => {
     expect(after?.deleteExpiresAt).toBeNull()
   })
 
+  it('对不存在的文档重命名/软删/恢复均为空操作', async () => {
+    await expect(renameDocument('missing', '新名')).resolves.toBeUndefined()
+    await expect(softDeleteDocument('missing')).resolves.toBeUndefined()
+    await expect(restoreDocument('missing')).resolves.toBeUndefined()
+    expect(await getDocument('missing')).toBeNull()
+    expect((await listDocuments()).length).toBe(0)
+  })
+
   it('彻底删除后不可读', async () => {
     const doc = await saveDocumentToLibrary({ title: 't', content: 'c' })
     await removeDocumentLocally(doc.docId)
     expect(await getDocument(doc.docId)).toBeNull()
   })
 
+  it('fileSizeBytes 按 UTF-8 字节数计算', () => {
+    expect(createLibraryDocument({ title: 't', content: '你好世界' }).fileSizeBytes).toBe(12)
+  })
+
+  it('空白标题回退为未命名文档', () => {
+    expect(createLibraryDocument({ title: '   ', content: 'c' }).title).toBe('未命名文档')
+  })
+
   it('迁移 M1 遗留 localStorage 单文档', async () => {
     localStorage.setItem('mtts:doc', JSON.stringify({ id: 'legacy-1', title: '旧文', content: '# 旧内容', savedAt: Date.now() }))
     const migrated = await migrateLegacyDocument()
-    expect(migrated?.docId).toBe('legacy-1')
+    expect(migrated?.docId).toBeTruthy()
+    expect(migrated?.docId).not.toBe('legacy-1')
     expect(migrated?.dirty).toBe(true)
     expect((await listDocuments()).length).toBe(1)
+    expect(localStorage.getItem('mtts:doc')).toBeNull()
     // 二次迁移不重复导入
     expect(await migrateLegacyDocument()).toBeNull()
     expect((await listDocuments()).length).toBe(1)

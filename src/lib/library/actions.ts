@@ -1,11 +1,18 @@
 import type { LibraryDocument } from '@/types/document'
 import { contentHashOf } from '@/types/document'
 import { getDocument, putDocument, deleteDocument } from '@/lib/storage/library'
-import { loadLegacyDocument } from '@/lib/storage/local'
+import { loadLegacyDocument, clearLegacyDocument } from '@/lib/storage/local'
 import { CONFIG } from '@/lib/config'
 
 export function newDocId(): string {
-  return crypto.randomUUID()
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
 function byteLength(s: string): number {
@@ -36,7 +43,9 @@ export async function saveDocumentToLibrary(input: { docId?: string; title: stri
         content: input.content,
         contentHash: contentHashOf(input.content),
         fileSizeBytes: byteLength(input.content),
-        updatedAt: Date.now(),
+        updatedAt: Math.max(Date.now(), existing.updatedAt + 1),
+        deletedAt: null,
+        deleteExpiresAt: null,
         dirty: true,
       }
     : createLibraryDocument(input)
@@ -50,7 +59,7 @@ export async function renameDocument(docId: string, title: string): Promise<void
   await putDocument({
     ...doc,
     title: title.trim() || doc.title,
-    updatedAt: Date.now(),
+    updatedAt: Math.max(Date.now(), doc.updatedAt + 1),
     dirty: true,
   })
 }
@@ -58,7 +67,7 @@ export async function renameDocument(docId: string, title: string): Promise<void
 export async function softDeleteDocument(docId: string): Promise<void> {
   const doc = await getDocument(docId)
   if (!doc || doc.deletedAt) return
-  const now = Date.now()
+  const now = Math.max(Date.now(), doc.updatedAt + 1)
   await putDocument({
     ...doc,
     deletedAt: now,
@@ -75,7 +84,7 @@ export async function restoreDocument(docId: string): Promise<void> {
     ...doc,
     deletedAt: null,
     deleteExpiresAt: null,
-    updatedAt: Date.now(),
+    updatedAt: Math.max(Date.now(), doc.updatedAt + 1),
     dirty: true,
   })
 }
@@ -88,8 +97,9 @@ export async function migrateLegacyDocument(): Promise<LibraryDocument | null> {
   const legacy = loadLegacyDocument()
   if (!legacy) return null
   if (await getDocument(legacy.id)) return null
-  const doc = createLibraryDocument({ docId: legacy.id, title: legacy.title, content: legacy.content })
+  const doc = createLibraryDocument({ title: legacy.title, content: legacy.content })
   await putDocument(doc)
+  clearLegacyDocument()
   return doc
 }
 

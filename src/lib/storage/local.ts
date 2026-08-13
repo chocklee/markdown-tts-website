@@ -22,6 +22,10 @@ export function loadLegacyDocument(): LegacyStoredDocument | null {
   }
 }
 
+export function clearLegacyDocument(): void {
+  localStorage.removeItem(LEGACY_DOC_KEY)
+}
+
 export function savePosition(docId: string, sentenceId: string): void {
   localStorage.setItem(POS_KEY, JSON.stringify({ docId, sentenceId }))
 }
