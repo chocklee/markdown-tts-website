@@ -1,5 +1,5 @@
 import type { LibraryDocument, SyncedDocument } from '@/types/document'
-import { listDocuments, putDocument } from '@/lib/storage/library'
+import { listDocuments, putDocument, deleteDocument } from '@/lib/storage/library'
 import { computeSyncPlan } from '@/lib/sync/engine'
 
 export interface SyncResult {
@@ -63,6 +63,10 @@ export async function runSync(): Promise<SyncResult> {
     for (const doc of plan.downloads) {
       await putDocument({ ...doc, dirty: false })
       downloaded += 1
+    }
+
+    for (const docId of plan.removals) {
+      await deleteDocument(docId)
     }
   } catch {
     return { uploaded, downloaded, conflicted, error: '网络连接失败，请稍后重试', quotaBytes }

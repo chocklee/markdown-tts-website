@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { runSync } from '../manager'
-import { listDocuments, putDocument, deleteDocument } from '@/lib/storage/library'
+import { listDocuments, putDocument, deleteDocument, getDocument } from '@/lib/storage/library'
 import type { LibraryDocument } from '@/types/document'
 
 interface ResponseLike {
@@ -45,6 +45,14 @@ afterEach(() => {
 })
 
 describe('runSync', () => {
+  it('本地已删除且云端缺失 → 移除本地且不上传（防止复活）', async () => {
+    await putDocument(makeDoc('gone', { deletedAt: 300, deleteExpiresAt: 300 + 86400000 * 30, dirty: true }))
+    const result = await runSync()
+    expect(result.uploaded).toBe(0)
+    expect(await getDocument('gone')).toBeNull()
+  })
+
+
   it('GET 401 → 登录状态失效，计数为 0，quotaBytes 为 null', async () => {
     fetchMock.mockImplementation(async () => jsonResponse({ error: 'unauthorized' }, 401))
     const result = await runSync()

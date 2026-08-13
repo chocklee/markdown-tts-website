@@ -38,6 +38,38 @@ describe('computeSyncPlan', () => {
     expect(plan.downloads).toEqual([])
   })
 
+  it('本地已删除且云端缺失 → 本地移除，不上传（防止彻底删除复活）', () => {
+    const plan = computeSyncPlan(
+      [localDoc('a', 300, { deletedAt: 400, deleteExpiresAt: 400 + 86400000 * 30 })],
+      [],
+    )
+    expect(plan.removals).toEqual(['a'])
+    expect(plan.uploads).toEqual([])
+  })
+
+  it('本地未删除且云端缺失 → 照常上传，不进入 removals', () => {
+    const plan = computeSyncPlan([localDoc('a', 300)], [])
+    expect(plan.removals).toEqual([])
+    expect(plan.uploads.map((d) => d.docId)).toEqual(['a'])
+  })
+
+  it('本地已删除且云端仍存在 → 上传删除状态，不进入 removals', () => {
+    const plan = computeSyncPlan(
+      [localDoc('a', 400, { deletedAt: 500, deleteExpiresAt: 500 + 86400000 * 30, dirty: true })],
+      [remoteDoc('a', 300)],
+    )
+    expect(plan.removals).toEqual([])
+    expect(plan.uploads.map((d) => d.docId)).toEqual(['a'])
+  })
+
+  it('本地已删除且云端缺失（过期删除）→ 移除本地', () => {
+    const plan = computeSyncPlan(
+      [localDoc('a', 300, { deletedAt: 400, deleteExpiresAt: 100 })],
+      [],
+    )
+    expect(plan.removals).toEqual(['a'])
+  })
+
   it('云端有而本地没有 → 下载', () => {
     const plan = computeSyncPlan([], [remoteDoc('b', 200)])
     expect(plan.downloads.map((d) => d.docId)).toEqual(['b'])

@@ -937,18 +937,26 @@ import type { LibraryDocument, SyncedDocument } from '@/types/document'
 export interface SyncPlan {
   uploads: LibraryDocument[]
   downloads: SyncedDocument[]
+  removals: string[]
 }
 
 export function computeSyncPlan(local: LibraryDocument[], remote: SyncedDocument[]): SyncPlan {
   const remoteByDocId = new Map(remote.map((d) => [d.docId, d]))
   const uploads: LibraryDocument[] = []
   const downloads: SyncedDocument[] = []
+  const removals: string[] = []
   const localDocIds = new Set<string>()
 
   for (const localDoc of local) {
     localDocIds.add(localDoc.docId)
     const remoteDoc = remoteByDocId.get(localDoc.docId)
     if (!remoteDoc) {
+      // 云端已不存在（他端彻底删除或已过期清理）：本地已删除的文档直接移除，
+      // 避免把已删文档重新上传回去（删除复活）。
+      if (localDoc.deletedAt !== null) {
+        removals.push(localDoc.docId)
+        continue
+      }
       uploads.push(localDoc)
       continue
     }
@@ -965,7 +973,7 @@ export function computeSyncPlan(local: LibraryDocument[], remote: SyncedDocument
     }
   }
 
-  return { uploads, downloads }
+  return { uploads, downloads, removals }
 }
 ```
 
