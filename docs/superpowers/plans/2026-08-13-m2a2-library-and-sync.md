@@ -1096,7 +1096,7 @@ git commit -m "feat(library): add sync runner and scheduler"
 - Modify: `src/app/reader/page.tsx`
 - Create: `src/components/reader/ReaderClient.tsx`
 
-- [ ] **Step 1: 重写 `src/components/home/InputSection.tsx`（保存到文件库并触发同步）**
+- [x] **Step 1: 重写 `src/components/home/InputSection.tsx`（保存到文件库并触发同步）**
 
 ```tsx
 'use client'
@@ -1221,7 +1221,7 @@ export default function InputSection() {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/components/reader/ReaderClient.tsx`**
+- [x] **Step 2: 创建 `src/components/reader/ReaderClient.tsx`**
 
 ```tsx
 'use client'
@@ -1308,7 +1308,7 @@ export function ReaderClient({ docId }: { docId: string | null }) {
 ```
 
 位置说明：阅读位置以文件库 `docId` 为 key 保存（与 M1 以内容哈希为 key 不同），重命名或内容变化后位置仍能对应到同一篇文档；句子 id 找不到时 `restoreIndex` 自动忽略。
-- [ ] **Step 3: 重写 `src/app/reader/page.tsx` 为服务端包装**
+- [x] **Step 3: 重写 `src/app/reader/page.tsx` 为服务端包装**
 
 ```tsx
 import { ReaderClient } from '@/components/reader/ReaderClient'
@@ -1325,14 +1325,14 @@ export default async function ReaderPage({
 }
 ```
 
-- [ ] **Step 4: 验证**
+- [x] **Step 4: 验证**
 
 Run: `npm run test && npx tsc --noEmit`
 Expected: 全部通过
 
 手动：`npm run dev` 打开首页粘贴内容 → 开始收听 → 进入阅读器正常朗读；刷新 URL（带 docId）正常恢复；旧 localStorage 有 M1 文档时首次打开自动迁移。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/components/home/InputSection.tsx src/app/reader/page.tsx src/components/reader/ReaderClient.tsx
