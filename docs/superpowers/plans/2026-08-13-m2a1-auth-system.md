@@ -243,7 +243,7 @@ import { hashPassword, verifyPassword } from '../password'
 describe('hashPassword / verifyPassword', () => {
   it('正确密码验证通过', () => {
     const hash = hashPassword('abc12345')
-    expect(hash.startsWith('scrypt:')).toBe(true)
+    expect(hash.startsWith('scrypt$')).toBe(true)
     expect(verifyPassword('abc12345', hash)).toBe(true)
   })
 
@@ -259,6 +259,35 @@ describe('hashPassword / verifyPassword', () => {
   it('损坏的存储值直接拒绝', () => {
     expect(verifyPassword('abc12345', 'not-a-hash')).toBe(false)
   })
+
+  it('哈希格式包含成本参数与固定长度', () => {
+    expect(hashPassword('abc12345')).toMatch(/^scrypt\$16384\$8\$1\$[0-9a-f]{32}\$[0-9a-f]{128}$/)
+  })
+
+  it('篡改哈希后验证失败', () => {
+    const hash = hashPassword('abc12345')
+    const tampered = hash.slice(0, -1) + (hash.endsWith('a') ? 'b' : 'a')
+    expect(verifyPassword('abc12345', tampered)).toBe(false)
+  })
+
+  it('篡改盐后验证失败', () => {
+    const hash = hashPassword('abc12345')
+    const parts = hash.split('$')
+    parts[4] = parts[4].startsWith('a') ? 'b' + parts[4].slice(1) : 'a' + parts[4].slice(1)
+    expect(verifyPassword('abc12345', parts.join('$'))).toBe(false)
+  })
+
+  it('盐或哈希长度非法的存储值直接拒绝', () => {
+    expect(verifyPassword('abc12345', 'scrypt$16384$8$1$ab$cd')).toBe(false)
+    expect(verifyPassword('abc12345', 'scrypt$16384$8$1$' + 'a'.repeat(32) + '$cd')).toBe(false)
+  })
+
+  it('成本参数超出安全范围直接拒绝', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$999$8$1$${salt}$${hash}`)).toBe(false)
+    expect(verifyPassword('abc12345', `scrypt$16384$999$1$${salt}$${hash}`)).toBe(false)
+  })
 })
 ```
 
@@ -272,17 +301,33 @@ Expected: FAIL（模块不存在 / 函数未定义）
 ```ts
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 
+export const SCRYPT_N = 16384
+export const SCRYPT_R = 8
+export const SCRYPT_P = 1
+export const SCRYPT_KEYLEN = 64
+
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex')
-  const hash = scryptSync(password, salt, 64).toString('hex')
-  return `scrypt:${salt}:${hash}`
+  const hash = scryptSync(password, salt, SCRYPT_KEYLEN, {
+    N: SCRYPT_N,
+    r: SCRYPT_R,
+    p: SCRYPT_P,
+  }).toString('hex')
+  return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${hash}`
 }
 
 export function verifyPassword(password: string, stored: string): boolean {
-  const parts = stored.split(':')
-  if (parts.length !== 3 || parts[0] !== 'scrypt') return false
-  const [, salt, expectedHex] = parts
-  const candidate = scryptSync(password, salt, 64)
+  const parts = stored.split('$')
+  if (parts.length !== 6 || parts[0] !== 'scrypt') return false
+  const [, n, r, p, salt, expectedHex] = parts
+  if (!/^[0-9a-f]{32}$/.test(salt)) return false
+  if (!/^[0-9a-f]{128}$/.test(expectedHex)) return false
+  const costN = Number(n)
+  const costR = Number(r)
+  const costP = Number(p)
+  if (!Number.isInteger(costN) || !Number.isInteger(costR) || !Number.isInteger(costP)) return false
+  if (costN < 1024 || costN > 2 ** 24 || costR < 1 || costR > 64 || costP < 1 || costP > 16) return false
+  const candidate = scryptSync(password, salt, SCRYPT_KEYLEN, { N: costN, r: costR, p: costP })
   const expected = Buffer.from(expectedHex, 'hex')
   return candidate.length === expected.length && timingSafeEqual(candidate, expected)
 }
