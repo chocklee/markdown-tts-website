@@ -34,7 +34,7 @@
 - Create: `db/migrations/001_auth.sql`
 - Modify: `.gitignore`
 
-- [ ] **Step 1: 安装依赖**
+- [x] **Step 1: 安装依赖**
 
 ```bash
 npm install next-auth@beta @auth/pg-adapter pg resend
@@ -43,7 +43,7 @@ npm install -D @types/pg tsx fake-indexeddb
 
 说明：`next-auth@beta` 即 Auth.js v5；若 beta 标签已下线，改用 `npm install next-auth@5`。装完后 `npx tsc --noEmit` 应无错误（可能需等下一步代码就绪）。
 
-- [ ] **Step 2: 修改 `package.json` scripts**
+- [x] **Step 2: 修改 `package.json` scripts**
 
 ```json
 {
@@ -59,7 +59,7 @@ npm install -D @types/pg tsx fake-indexeddb
 }
 ```
 
-- [ ] **Step 3: 创建 `.env.example`**
+- [x] **Step 3: 创建 `.env.example`**
 
 ```bash
 # 数据库（Neon / Vercel Postgres）
@@ -76,7 +76,7 @@ EMAIL_FROM=听 Markdown <onboarding@resend.dev>
 APP_URL=http://localhost:3000
 ```
 
-- [ ] **Step 4: 创建 `src/lib/config.ts`**
+- [x] **Step 4: 创建 `src/lib/config.ts`**
 
 ```ts
 export const CONFIG = {
@@ -93,7 +93,7 @@ export const CONFIG = {
 } as const
 ```
 
-- [ ] **Step 5: 创建 `src/lib/db/pool.ts`**
+- [x] **Step 5: 创建 `src/lib/db/pool.ts`**
 
 ```ts
 import { Pool } from 'pg'
@@ -107,7 +107,7 @@ export const pool =
 if (process.env.NODE_ENV !== 'production') globalForPg.mttsPool = pool
 ```
 
-- [ ] **Step 6: 创建 `db/migrations/001_auth.sql`**
+- [x] **Step 6: 创建 `db/migrations/001_auth.sql`**
 
 ```sql
 -- Auth.js pg-adapter 标准表 + 自建用户/验证表
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS "users" (
   "updated_at" timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS "account" (
+CREATE TABLE IF NOT EXISTS "accounts" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "userId" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
   "type" text NOT NULL,
@@ -139,14 +139,14 @@ CREATE TABLE IF NOT EXISTS "account" (
   UNIQUE ("provider", "providerAccountId")
 );
 
-CREATE TABLE IF NOT EXISTS "session" (
+CREATE TABLE IF NOT EXISTS "sessions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "sessionToken" text NOT NULL UNIQUE,
   "userId" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
   "expires" timestamptz NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS "verificationToken" (
+CREATE TABLE IF NOT EXISTS "verification_token" (
   "identifier" text NOT NULL,
   "token" text NOT NULL,
   "expires" timestamptz NOT NULL,
@@ -170,7 +170,9 @@ CREATE TABLE IF NOT EXISTS "password_resets" (
 );
 ```
 
-- [ ] **Step 7: 创建 `scripts/migrate.ts`**
+注：001 已在开发库应用过旧表名，由 002_auth_adapter_fix.sql 修正；新环境按 001+002 顺序执行即可得到正确 schema。
+
+- [x] **Step 7: 创建 `scripts/migrate.ts`**
 
 ```ts
 import { readdir, readFile } from 'node:fs/promises'
@@ -211,11 +213,11 @@ main().catch((err) => {
 })
 ```
 
-- [ ] **Step 8: 确认 `.gitignore` 已忽略 `.env*` 但保留 `.env.example`**
+- [x] **Step 8: 确认 `.gitignore` 已忽略 `.env*` 但保留 `.env.example`**
 
 `.gitignore` 应包含 `.env*.local` 与 `.env`；`!.env.example` 例外的写法按需调整。执行 `npm run db:migrate`，预期输出 `applied 001_auth.sql` + `migrations up to date`（需 `DATABASE_URL` 已配置；连不上数据库则此步失败，先修复连接再继续）。
 
-- [ ] **Step 9: 提交**
+- [x] **Step 9: 提交**
 
 ```bash
 git add package.json package-lock.json .env.example src/lib/config.ts src/lib/db/pool.ts scripts/migrate.ts db/migrations/001_auth.sql .gitignore
@@ -230,7 +232,7 @@ git commit -m "feat(auth): add db pool, migrations, and config"
 - Create: `src/lib/auth/password.ts`
 - Test: `src/lib/auth/__tests__/password.test.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `src/lib/auth/__tests__/password.test.ts`:
 
@@ -241,7 +243,7 @@ import { hashPassword, verifyPassword } from '../password'
 describe('hashPassword / verifyPassword', () => {
   it('正确密码验证通过', () => {
     const hash = hashPassword('abc12345')
-    expect(hash.startsWith('scrypt:')).toBe(true)
+    expect(hash.startsWith('scrypt$')).toBe(true)
     expect(verifyPassword('abc12345', hash)).toBe(true)
   })
 
@@ -257,41 +259,110 @@ describe('hashPassword / verifyPassword', () => {
   it('损坏的存储值直接拒绝', () => {
     expect(verifyPassword('abc12345', 'not-a-hash')).toBe(false)
   })
+
+  it('哈希格式包含成本参数与固定长度', () => {
+    expect(hashPassword('abc12345')).toMatch(/^scrypt\$16384\$8\$1\$[0-9a-f]{32}\$[0-9a-f]{128}$/)
+  })
+
+  it('篡改哈希后验证失败', () => {
+    const hash = hashPassword('abc12345')
+    const tampered = hash.slice(0, -1) + (hash.endsWith('a') ? 'b' : 'a')
+    expect(verifyPassword('abc12345', tampered)).toBe(false)
+  })
+
+  it('篡改盐后验证失败', () => {
+    const hash = hashPassword('abc12345')
+    const parts = hash.split('$')
+    parts[4] = parts[4].startsWith('a') ? 'b' + parts[4].slice(1) : 'a' + parts[4].slice(1)
+    expect(verifyPassword('abc12345', parts.join('$'))).toBe(false)
+  })
+
+  it('盐或哈希长度非法的存储值直接拒绝', () => {
+    expect(verifyPassword('abc12345', 'scrypt$16384$8$1$ab$cd')).toBe(false)
+    expect(verifyPassword('abc12345', 'scrypt$16384$8$1$' + 'a'.repeat(32) + '$cd')).toBe(false)
+  })
+
+  it('成本参数超出安全范围直接拒绝', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$999$8$1$${salt}$${hash}`)).toBe(false)
+    expect(verifyPassword('abc12345', `scrypt$16384$999$1$${salt}$${hash}`)).toBe(false)
+  })
+
+  it('范围内但不可执行的参数（N 非 2 的幂）直接拒绝不抛异常', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$16385$8$1$${salt}$${hash}`)).toBe(false)
+  })
+
+  it('超过 Node maxmem 的参数（N=65536）直接拒绝不抛异常', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$65536$8$1$${salt}$${hash}`)).toBe(false)
+  })
+
+  it('非十进制写法参数直接拒绝', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$0x4000$8$1$${salt}$${hash}`)).toBe(false)
+  })
 })
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `npx vitest run src/lib/auth/__tests__/password.test.ts`
 Expected: FAIL（模块不存在 / 函数未定义）
 
-- [ ] **Step 3: 实现 `src/lib/auth/password.ts`**
+- [x] **Step 3: 实现 `src/lib/auth/password.ts`**
 
 ```ts
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 
+export const SCRYPT_N = 16384
+export const SCRYPT_R = 8
+export const SCRYPT_P = 1
+export const SCRYPT_KEYLEN = 64
+
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex')
-  const hash = scryptSync(password, salt, 64).toString('hex')
-  return `scrypt:${salt}:${hash}`
+  const hash = scryptSync(password, salt, SCRYPT_KEYLEN, {
+    N: SCRYPT_N,
+    r: SCRYPT_R,
+    p: SCRYPT_P,
+  }).toString('hex')
+  return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${hash}`
 }
 
 export function verifyPassword(password: string, stored: string): boolean {
-  const parts = stored.split(':')
-  if (parts.length !== 3 || parts[0] !== 'scrypt') return false
-  const [, salt, expectedHex] = parts
-  const candidate = scryptSync(password, salt, 64)
+  const parts = stored.split('$')
+  if (parts.length !== 6 || parts[0] !== 'scrypt') return false
+  const [, n, r, p, salt, expectedHex] = parts
+  if (!/^[0-9a-f]{32}$/.test(salt)) return false
+  if (!/^[0-9a-f]{128}$/.test(expectedHex)) return false
+  if (!/^\d+$/.test(n) || !/^\d+$/.test(r) || !/^\d+$/.test(p)) return false
+  const costN = Number(n)
+  const costR = Number(r)
+  const costP = Number(p)
+  if (!Number.isInteger(costN) || !Number.isInteger(costR) || !Number.isInteger(costP)) return false
+  if (costN < 1024 || costN > 2 ** 24 || costR < 1 || costR > 64 || costP < 1 || costP > 16) return false
+  let candidate: Buffer
+  try {
+    candidate = scryptSync(password, salt, SCRYPT_KEYLEN, { N: costN, r: costR, p: costP })
+  } catch {
+    return false
+  }
   const expected = Buffer.from(expectedHex, 'hex')
   return candidate.length === expected.length && timingSafeEqual(candidate, expected)
 }
 ```
 
-- [ ] **Step 4: 运行测试确认通过**
+- [x] **Step 4: 运行测试确认通过**
 
 Run: `npx vitest run src/lib/auth/__tests__/password.test.ts`
 Expected: 4 个用例 PASS
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/lib/auth/password.ts src/lib/auth/__tests__/password.test.ts
@@ -308,7 +379,7 @@ git commit -m "feat(auth): add scrypt password hashing"
 - Create: `src/lib/auth/server.ts`
 - Create: `src/app/api/auth/[...nextauth]/route.ts`
 
-- [ ] **Step 1: 创建类型增强 `src/types/next-auth.d.ts`**
+- [x] **Step 1: 创建类型增强 `src/types/next-auth.d.ts`**
 
 ```ts
 import type { DefaultSession } from 'next-auth'
@@ -326,14 +397,16 @@ declare module 'next-auth/jwt' {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/lib/auth/config.ts`**
+- [x] **Step 2: 创建 `src/lib/auth/config.ts`**
 
 ```ts
 import type { NextAuthConfig } from 'next-auth'
 import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'
 import { pool } from '@/lib/db/pool'
-import { verifyPassword } from '@/lib/auth/password'
+import { hashPassword, verifyPassword } from '@/lib/auth/password'
+
+const DUMMY_HASH = hashPassword('timing-equalizer-dummy')
 
 export const authConfig = {
   session: { strategy: 'jwt' },
@@ -357,18 +430,24 @@ export const authConfig = {
         const email = typeof credentials?.email === 'string' ? credentials.email.trim().toLowerCase() : ''
         const password = typeof credentials?.password === 'string' ? credentials.password : ''
         if (!email || !password) return null
-        const { rows } = await pool.query<{
-          id: string
-          name: string | null
-          email: string
-          password_hash: string | null
-          emailVerified: Date | null
-        }>(
-          'SELECT id, name, email, password_hash, "emailVerified" FROM users WHERE email = $1',
-          [email],
-        )
-        const user = rows[0]
-        if (!user || !user.password_hash || !user.emailVerified) return null
+        let user: { id: string; name: string | null; email: string; password_hash: string | null; emailVerified: Date | null } | undefined
+        try {
+          const { rows } = await pool.query<{
+            id: string
+            name: string | null
+            email: string
+            password_hash: string | null
+            emailVerified: Date | null
+          }>('SELECT id, name, email, password_hash, "emailVerified" FROM users WHERE lower(email) = lower($1)', [email])
+          user = rows[0]
+        } catch (err) {
+          console.error('authorize query failed', err)
+          return null
+        }
+        if (!user || !user.password_hash || !user.emailVerified) {
+          verifyPassword(password, DUMMY_HASH)
+          return null
+        }
         if (!verifyPassword(password, user.password_hash)) return null
         return { id: user.id, name: user.name, email: user.email }
       },
@@ -380,14 +459,14 @@ export const authConfig = {
       return token
     },
     session({ session, token }) {
-      if (token.uid) session.user.id = token.uid as string
+      if (typeof token.uid === 'string') session.user.id = token.uid
       return session
     },
   },
 } satisfies NextAuthConfig
 ```
 
-- [ ] **Step 3: 创建 `src/lib/auth/server.ts`**
+- [x] **Step 3: 创建 `src/lib/auth/server.ts`**
 
 ```ts
 import NextAuth from 'next-auth'
@@ -401,7 +480,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 })
 ```
 
-- [ ] **Step 4: 创建 `src/app/api/auth/[...nextauth]/route.ts`**
+- [x] **Step 4: 创建 `src/app/api/auth/[...nextauth]/route.ts`**
 
 ```ts
 import { handlers } from '@/lib/auth/server'
@@ -411,12 +490,12 @@ export const runtime = 'nodejs'
 export const { GET, POST } = handlers
 ```
 
-- [ ] **Step 5: 验证类型与构建**
+- [x] **Step 5: 验证类型与构建**
 
 Run: `npx tsc --noEmit && npm run lint`
 Expected: 无错误（若 Auth.js 类型对 Session/JWT 增强报冲突，按增强文件已提供的字段调整，不要弱化类型）
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add src/types/next-auth.d.ts src/lib/auth/config.ts src/lib/auth/server.ts src/app/api/auth/[...nextauth]/route.ts
@@ -432,15 +511,24 @@ git commit -m "feat(auth): add Auth.js v5 instance with credentials and google p
 - Create: `src/lib/security/rateLimit.ts`
 - Test: `src/lib/security/__tests__/rateLimit.test.ts`
 
-- [ ] **Step 1: 写限流失败测试**
+- [x] **Step 1: 写限流失败测试**
 
 `src/lib/security/__tests__/rateLimit.test.ts`:
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { isRateLimited } from '../rateLimit'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { isRateLimited, clientIp } from '../rateLimit'
 
 describe('isRateLimited', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('第 1~3 次放行，第 4 次拦截', () => {
     const key = 'ip:1'
     expect(isRateLimited(key, 3, 60_000)).toBe(false)
@@ -450,23 +538,40 @@ describe('isRateLimited', () => {
   })
 
   it('窗口过期后计数重置', () => {
-    expect(isRateLimited('ip:2', 1, -1000)).toBe(false)
+    const key = 'ip:2'
+    expect(isRateLimited(key, 1, 60_000)).toBe(false)
+    vi.setSystemTime(new Date('2026-01-01T00:01:01Z'))
+    expect(isRateLimited(key, 1, 60_000)).toBe(false)
+    expect(isRateLimited(key, 1, 60_000)).toBe(true)
+  })
+
+  it('clientIp 解析 x-forwarded-for', () => {
+    const req = (value: string | null) =>
+      ({ headers: { get: (name: string) => (name === 'x-forwarded-for' ? value : null) } }) as unknown as Request
+    expect(clientIp(req('1.2.3.4, 5.6.7.8'))).toBe('1.2.3.4')
+    expect(clientIp(req(' 1.2.3.4 '))).toBe('1.2.3.4')
+    expect(clientIp(req(null))).toBe('unknown')
   })
 })
 ```
 
-- [ ] **Step 2: 运行确认失败**
+- [x] **Step 2: 运行确认失败**
 
 Run: `npx vitest run src/lib/security/__tests__/rateLimit.test.ts`
 Expected: FAIL（模块不存在）
 
-- [ ] **Step 3: 实现 `src/lib/security/rateLimit.ts`**
+- [x] **Step 3: 实现 `src/lib/security/rateLimit.ts`**
 
 ```ts
 const buckets = new Map<string, { count: number; resetAt: number }>()
 
 export function isRateLimited(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now()
+  if (buckets.size > 1000) {
+    for (const [k, entry] of buckets) {
+      if (entry.resetAt < now) buckets.delete(k)
+    }
+  }
   const entry = buckets.get(key)
   if (!entry || entry.resetAt < now) {
     buckets.set(key, { count: 1, resetAt: now + windowMs })
@@ -476,22 +581,33 @@ export function isRateLimited(key: string, limit: number, windowMs: number): boo
   return entry.count > limit
 }
 
+// 依赖平台覆盖 X-Forwarded-For（Vercel 行为），取最左值作为客户端 IP
 export function clientIp(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
 }
 ```
 
-- [ ] **Step 4: 运行确认通过**
+- [x] **Step 4: 运行确认通过**
 
 Run: `npx vitest run src/lib/security/__tests__/rateLimit.test.ts`
 Expected: 2 个用例 PASS
 
-- [ ] **Step 5: 实现 `src/lib/email/send.ts`**
+- [x] **Step 5: 实现 `src/lib/email/send.ts`**
 
 ```ts
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY ?? '')
+let resend: Resend | null = null
+
+function getResend(): Resend {
+  if (!resend) {
+    const key = process.env.RESEND_API_KEY
+    if (!key) throw new Error('RESEND_API_KEY 未配置')
+    resend = new Resend(key)
+  }
+  return resend
+}
+
 const FROM = process.env.EMAIL_FROM ?? '听 Markdown <onboarding@resend.dev>'
 
 export function appUrl(): string {
@@ -505,34 +621,37 @@ const baseHtml = (title: string, bodyHtml: string) => `
   <p style="color:#94a3b8;font-size:12px;margin-top:24px">听 Markdown — 把文字变成声音</p>
 </div>`
 
+async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  const result = await getResend().emails.send({ from: FROM, to, subject, html })
+  if (result.error) throw new Error(result.error.message)
+}
+
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
   const link = `${appUrl()}/verify-email?token=${encodeURIComponent(token)}`
-  await resend.emails.send({
-    from: FROM,
-    to: email,
-    subject: '验证你的邮箱 — 听 Markdown',
-    html: baseHtml(
+  await sendEmail(
+    email,
+    '验证你的邮箱 — 听 Markdown',
+    baseHtml(
       '验证你的邮箱',
       `<p>点击下面的链接完成邮箱验证（24 小时内有效）：</p><p><a href="${link}">${link}</a></p><p>如果不是你本人操作，请忽略此邮件。</p>`,
     ),
-  })
+  )
 }
 
 export async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
   const link = `${appUrl()}/reset-password?token=${encodeURIComponent(token)}`
-  await resend.emails.send({
-    from: FROM,
-    to: email,
-    subject: '重置密码 — 听 Markdown',
-    html: baseHtml(
+  await sendEmail(
+    email,
+    '重置密码 — 听 Markdown',
+    baseHtml(
       '重置你的密码',
       `<p>点击下面的链接设置新密码（24 小时内有效）：</p><p><a href="${link}">${link}</a></p><p>如果不是你本人操作，请忽略此邮件。</p>`,
     ),
-  })
+  )
 }
 ```
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add src/lib/email/send.ts src/lib/security/rateLimit.ts src/lib/security/__tests__/rateLimit.test.ts
@@ -547,7 +666,7 @@ git commit -m "feat(auth): add resend email sender and rate limiter"
 - Create: `src/app/api/auth/register/route.ts`
 - Create: `src/app/api/auth/resend-verification/route.ts`
 
-- [ ] **Step 1: 创建 `src/app/api/auth/register/route.ts`**
+- [x] **Step 1: 创建 `src/app/api/auth/register/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -571,10 +690,13 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
   }
+  if (typeof body !== 'object' || body === null) {
+    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+  }
 
-  const email = body.email?.trim().toLowerCase() ?? ''
-  const password = body.password ?? ''
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const password = typeof body.password === 'string' ? body.password : ''
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return NextResponse.json({ error: '邮箱格式不正确' }, { status: 400 })
   }
   if (password.length < 8) {
@@ -585,27 +707,32 @@ export async function POST(req: Request) {
   }
 
   const client = await pool.connect()
+  let verificationToken = ''
+  const passwordHash = hashPassword(password)
   try {
     await client.query('BEGIN')
-    const existing = await client.query('SELECT id FROM users WHERE email = $1', [email])
+    const existing = await client.query('SELECT id FROM users WHERE lower(email) = lower($1)', [email])
     if (existing.rowCount) {
       await client.query('ROLLBACK')
       return NextResponse.json({ error: '该邮箱已注册' }, { status: 409 })
     }
-    const passwordHash = hashPassword(password)
     await client.query(
       'INSERT INTO users (email, password_hash, storage_quota_bytes) VALUES ($1, $2, $3)',
       [email, passwordHash, CONFIG.quota.freeBytes],
     )
     const token = randomBytes(32).toString('hex')
     const expiresAt = new Date(Date.now() + CONFIG.auth.verificationTtlMs)
-    const { rows: tokenRows } = await client.query<{ token: string }>(
+    const { rows } = await client.query<{ token: string }>(
       'INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3) RETURNING token',
       [email, token, expiresAt],
     )
+    verificationToken = rows[0].token
     await client.query('COMMIT')
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
+    if (typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505') {
+      return NextResponse.json({ error: '该邮箱已注册' }, { status: 409 })
+    }
     console.error('register failed', err)
     return NextResponse.json({ error: '注册失败，请稍后再试' }, { status: 500 })
   } finally {
@@ -613,11 +740,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { rows: tokenRows } = await pool.query(
-      'SELECT token FROM email_verifications WHERE email = $1 ORDER BY created_at DESC LIMIT 1',
-      [email],
-    )
-    await sendVerificationEmail(email, tokenRows[0].token)
+    await sendVerificationEmail(email, verificationToken)
   } catch (err) {
     console.error('send verification email failed', err)
   }
@@ -628,7 +751,7 @@ export async function POST(req: Request) {
 
 说明：邮件发送失败不阻塞注册返回（用户可稍后从登录页重发）；已注册邮箱返回 409。
 
-- [ ] **Step 2: 创建 `src/app/api/auth/resend-verification/route.ts`**
+- [x] **Step 2: 创建 `src/app/api/auth/resend-verification/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -651,21 +774,32 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
   }
-  const email = body.email?.trim().toLowerCase() ?? ''
+  if (typeof body !== 'object' || body === null) {
+    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+  }
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  if (email.length > 254) {
+    return NextResponse.json({ error: '邮箱格式不正确' }, { status: 400 })
+  }
 
-  const { rows } = await pool.query<{ emailVerified: Date | null }>(
-    'SELECT "emailVerified" FROM users WHERE email = $1',
-    [email],
-  )
-  if (rows[0] && !rows[0].emailVerified) {
-    const token = randomBytes(32).toString('hex')
-    const expiresAt = new Date(Date.now() + CONFIG.auth.verificationTtlMs)
-    await pool.query('INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)', [
-      email,
-      token,
-      expiresAt,
-    ])
-    await sendVerificationEmail(email, token).catch((err) => console.error('resend failed', err))
+  try {
+    const { rows } = await pool.query<{ emailVerified: Date | null }>(
+      'SELECT "emailVerified" FROM users WHERE lower(email) = lower($1)',
+      [email],
+    )
+    if (rows[0] && !rows[0].emailVerified) {
+      const token = randomBytes(32).toString('hex')
+      const expiresAt = new Date(Date.now() + CONFIG.auth.verificationTtlMs)
+      await pool.query('INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)', [
+        email,
+        token,
+        expiresAt,
+      ])
+      await sendVerificationEmail(email, token).catch((err) => console.error('resend failed', err))
+    }
+  } catch (err) {
+    console.error('resend verification failed', err)
+    return NextResponse.json({ error: '操作失败，请稍后再试' }, { status: 500 })
   }
 
   // 无论邮箱是否存在都返回成功，避免账号枚举
@@ -673,12 +807,12 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 3: 类型与构建检查**
+- [x] **Step 3: 类型与构建检查**
 
 Run: `npx tsc --noEmit && npm run lint`
 Expected: 无错误
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add src/app/api/auth/register/route.ts src/app/api/auth/resend-verification/route.ts
@@ -692,7 +826,7 @@ git commit -m "feat(auth): add register and resend-verification apis"
 **Files:**
 - Create: `src/app/verify-email/page.tsx`
 
-- [ ] **Step 1: 创建 `src/app/verify-email/page.tsx`**
+- [x] **Step 1: 创建 `src/app/verify-email/page.tsx`**
 
 ```tsx
 import Link from 'next/link'
@@ -719,6 +853,7 @@ export default async function VerifyEmailPage({
       if (rows.length === 0) {
         status = 'invalid'
       } else if (new Date(rows[0].expires_at).getTime() < Date.now()) {
+        await client.query('DELETE FROM email_verifications WHERE token = $1', [token])
         status = 'expired'
       } else {
         await client.query('UPDATE users SET "emailVerified" = now() WHERE email = $1', [rows[0].email])
@@ -757,7 +892,7 @@ export default async function VerifyEmailPage({
 }
 ```
 
-- [ ] **Step 2: 手动验收**
+- [x] **Step 2: 手动验收**
 
 1. 运行 `npm run dev`
 2. 用 curl 注册：`curl -X POST http://localhost:3000/api/auth/register -H 'Content-Type: application/json' -d '{"email":"test@example.com","password":"password123"}'` → `{"ok":true}`
@@ -765,7 +900,7 @@ export default async function VerifyEmailPage({
 4. 浏览器打开 `http://localhost:3000/verify-email?token=<token>` → 显示「邮箱验证成功」
 5. 再次打开同一链接 → 显示「验证链接无效」（一次性）
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 git add src/app/verify-email/page.tsx
@@ -779,9 +914,11 @@ git commit -m "feat(auth): add email verification page"
 **Files:**
 - Modify: `src/app/layout.tsx`
 - Create: `src/components/layout/Header.tsx`
+- Create: `src/app/api/auth/providers/route.ts`
 - Create: `src/app/login/page.tsx`
+- Create: `src/app/register/page.tsx`（补充任务，见 Step 5）
 
-- [ ] **Step 1: 修改 `src/app/layout.tsx`**
+- [x] **Step 1: 修改 `src/app/layout.tsx`**
 
 ```tsx
 import type { Metadata } from 'next'
@@ -808,7 +945,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-- [ ] **Step 2: 创建 `src/components/layout/Header.tsx`**
+- [x] **Step 2: 创建 `src/components/layout/Header.tsx`**
 
 ```tsx
 'use client'
@@ -848,7 +985,7 @@ export function Header() {
 }
 ```
 
-- [ ] **Step 3: 创建 `src/app/api/auth/providers/route.ts`**
+- [x] **Step 3: 创建 `src/app/api/auth/providers/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -860,7 +997,7 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 4: 创建 `src/app/login/page.tsx`**
+- [x] **Step 4: 创建 `src/app/login/page.tsx`**
 
 ```tsx
 'use client'
@@ -976,18 +1113,129 @@ export default function LoginPage() {
 }
 ```
 
-- [ ] **Step 5: 手动验收**
+- [x] **Step 5: 创建 `src/app/register/page.tsx`（补充任务：登录页的「注册新账号」指向这里）**
 
-1. 数据库注册一个已验证用户（`psql` 手动 `UPDATE users SET "emailVerified" = now() WHERE email = 'test@example.com'`）
-2. 浏览器访问 `/login`，用该邮箱密码登录 → 跳回首页，Header 显示邮箱与「退出」
-3. 未验证用户登录 → 显示错误提示 + 「重新发送验证邮件」按钮
-4. 未配置 Google 密钥时，登录页不显示 Google 按钮
+```tsx
+'use client'
+import { useState } from 'react'
+import Link from 'next/link'
 
-- [ ] **Step 6: 提交**
+export default function RegisterPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+  const [resendSent, setResendSent] = useState(false)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (res.ok) {
+      setDone(true)
+      return
+    }
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    setError(data.error ?? '注册失败，请重试')
+  }
+
+  async function resend() {
+    const res = await fetch('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    if (res.ok) setResendSent(true)
+  }
+
+  return (
+    <main className="mx-auto max-w-sm px-4 py-16">
+      <h1 className="text-center text-2xl font-bold">注册</h1>
+      {done ? (
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-slate-600">
+            验证邮件已发送到 <span className="font-medium">{email}</span>，请点击邮件中的链接完成验证。
+          </p>
+          <button
+            type="button"
+            onClick={() => void resend()}
+            className="mt-4 w-full rounded-lg border border-slate-300 py-2.5 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            {resendSent ? '已重新发送验证邮件' : '未收到？重新发送'}
+          </button>
+          <Link href="/login" className="mt-3 inline-block text-sm text-blue-600">
+            去登录
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm text-slate-600">
+              邮箱
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-blue-400"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm text-slate-600">
+              密码（至少 8 位）
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-blue-400"
+            />
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button type="submit" className="w-full rounded-lg bg-blue-600 py-2.5 text-white hover:bg-blue-700">
+            注册
+          </button>
+        </form>
+      )}
+    </main>
+  )
+}
+```
+
+- [x] **Step 6: 手动验收**
+
+1. 用 node 连库手动建一个已验证用户（或复用 Task 6 的验证流程）：
 
 ```bash
-git add src/app/layout.tsx src/components/layout/Header.tsx src/app/login/page.tsx src/app/api/auth/providers/route.ts
-git commit -m "feat(auth): add login page, header, and session provider"
+node -e "
+const fs=require('fs');const env=Object.fromEntries(fs.readFileSync('.env.local','utf8').split('\n').filter(Boolean).map(l=>{const i=l.indexOf('=');return[l.slice(0,i),l.slice(i+1)]}));
+const {Pool}=require('pg');const pool=new Pool({connectionString:env.DATABASE_URL});
+(async()=>{ await pool.query(\`INSERT INTO users (email, password_hash, \"emailVerified\") VALUES ('login-m2a@example.com', 'x', now()) ON CONFLICT (email) DO NOTHING\`); console.log('ok'); await pool.end(); })();
+"
+```
+
+2. 浏览器（dev server 3001）访问 `/login`，用该邮箱 + 任意密码登录（哈希是 'x'，验证邮箱已通过路径会走 scrypt 校验失败 → 显示错误即可确认错误路径；**更完整的正确路径**：先 `/register` 注册一个账号 → 库里把该用户 emailVerified 设为 now() → 再登录 → 应跳回首页，Header 显示邮箱与「退出」）
+3. 未验证用户登录 → 错误提示 + 「重新发送验证邮件」按钮
+4. 未配置 Google 密钥时登录页不显示 Google 按钮
+5. `/register` 页面：注册后显示「验证邮件已发送」状态；重复注册显示 409 错误文案
+6. 刷新页面会话保持（httpOnly Cookie）
+
+测试数据用完清理，dev server 停止。
+
+- [x] **Step 7: 提交**
+
+```bash
+git add src/app/layout.tsx src/components/layout/Header.tsx src/app/login/page.tsx src/app/api/auth/providers/route.ts src/app/register/page.tsx
+git commit -m "feat(auth): add login and register pages, header, and session provider"
 ```
 
 ---
@@ -1000,7 +1248,7 @@ git commit -m "feat(auth): add login page, header, and session provider"
 - Create: `src/app/forgot-password/page.tsx`
 - Create: `src/app/reset-password/page.tsx`
 
-- [ ] **Step 1: 创建 `src/app/api/auth/forgot-password/route.ts`**
+^- [x] **Step 1: 创建 `src/app/api/auth/forgot-password/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -1045,7 +1293,7 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/app/api/auth/reset-password/route.ts`**
+^- [x] **Step 2: 创建 `src/app/api/auth/reset-password/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -1106,7 +1354,7 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 3: 创建 `src/app/forgot-password/page.tsx`**
+^- [x] **Step 3: 创建 `src/app/forgot-password/page.tsx`**
 
 ```tsx
 'use client'
@@ -1164,7 +1412,7 @@ export default function ForgotPasswordPage() {
 }
 ```
 
-- [ ] **Step 4: 创建 `src/app/reset-password/page.tsx`（完整文件，含 Suspense 边界）**
+^- [x] **Step 4: 创建 `src/app/reset-password/page.tsx`（完整文件，含 Suspense 边界）**
 
 ```tsx
 'use client'
@@ -1250,13 +1498,13 @@ export default function ResetPasswordPageWrapper() {
 
 说明：`useSearchParams` 在 Next 15 构建时需要 Suspense 边界，所以页面主体是内部组件 `ResetPasswordPage`，默认导出 `ResetPasswordPageWrapper` 负责包 `Suspense`。
 
-- [ ] **Step 5: 手动验收**
+^- [x] **Step 5: 手动验收**
 
 1. 已注册用户调 `forgot-password` API → 数据库 `password_resets` 出现 token
 2. 打开 `/reset-password?token=<token>` → 设置新密码 → 用新密码登录成功
 3. 再次使用同一 token → 提示无效（一次性）
 
-- [ ] **Step 6: 提交**
+^- [x] **Step 6: 提交**
 
 ```bash
 git add src/app/api/auth/forgot-password/route.ts src/app/api/auth/reset-password/route.ts src/app/forgot-password/page.tsx src/app/reset-password/page.tsx
@@ -1267,12 +1515,12 @@ git commit -m "feat(auth): add forgot and reset password flows"
 
 ### Task 9: 全量验证与验收清单
 
-- [ ] **Step 1: 自动化检查**
+^- [x] **Step 1: 自动化检查**
 
 Run: `npm run test && npx tsc --noEmit && npm run lint && npm run build`
 Expected: 全部通过（测试含既有 82 个 + 新增用例；build 无报错）
 
-- [ ] **Step 2: 端到端验收（Playwright / 手动）**
+^- [x] **Step 2: 端到端验收（Playwright / 手动）**
 
 1. 注册 → 数据库取 token → 验证邮箱 → 登录成功 → Header 显示邮箱
 2. 未验证邮箱登录被拒
@@ -1282,7 +1530,7 @@ Expected: 全部通过（测试含既有 82 个 + 新增用例；build 无报错
 6. 刷新页面会话保持（httpOnly Cookie）
 7. 退出登录后回到首页，Header 恢复「登录 / 注册」状态（业务接口鉴权由下一计划 M2a-2 的文档 API 覆盖）
 
-- [ ] **Step 3: 推送**
+^- [x] **Step 3: 推送**
 
 ```bash
 git push origin master
