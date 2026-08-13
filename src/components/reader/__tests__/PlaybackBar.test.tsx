@@ -5,13 +5,14 @@ import userEvent from '@testing-library/user-event'
 import { PlaybackBar } from '../PlaybackBar'
 import { parseDocument } from '@/lib/markdown/parse'
 import { useReaderStore } from '@/lib/state/readerStore'
+import { defaultSettings } from '@/types/reader'
 
 const DOC = parseDocument('# 第一章\n你好。\n\n## 第二章\n继续。')
 
 function seedState(overrides: Partial<ReturnType<typeof useReaderStore.getState>> = {}) {
   useReaderStore.setState({
     document: DOC,
-    settings: { rate: 1, volume: 1, skipCode: true, skipTable: true },
+    settings: { ...defaultSettings },
     speakableIds: DOC.sentenceIds,
     currentIndex: 0,
     isPlaying: false,

@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import { ContentView } from '../ContentView'
+import { defaultSettings } from '@/types/reader'
 import { parseDocument } from '@/lib/markdown/parse'
 import { useReaderStore } from '@/lib/state/readerStore'
 import type { ReaderSettings } from '@/types/reader'
@@ -24,7 +25,7 @@ const a = 1
 function renderWithStore(currentIndex: number, settingsOverride?: Partial<ReaderSettings>) {
   useReaderStore.setState({
     document: DOC,
-    settings: { rate: 1, volume: 1, skipCode: true, skipTable: true, ...settingsOverride },
+    settings: { ...defaultSettings, ...settingsOverride },
     speakableIds: DOC.sentenceIds,
     currentIndex,
     isPlaying: true,
@@ -60,7 +61,7 @@ describe('ContentView', () => {
   })
 
   it('跳过代码块时显示占位提示', () => {
-    useReaderStore.setState({ settings: { rate: 1, volume: 1, skipCode: true, skipTable: true } })
+    useReaderStore.setState({ settings: { ...defaultSettings } })
     render(<ContentView document={DOC} />)
     expect(screen.getByText('已跳过代码块，可在朗读设置中开启')).toBeInTheDocument()
   })
@@ -84,7 +85,7 @@ describe('ContentView', () => {
     const doc = parseDocument('- 第一项。\n  - 嵌套项。')
     useReaderStore.setState({
       document: doc,
-      settings: { rate: 1, volume: 1, skipCode: true, skipTable: true },
+      settings: { ...defaultSettings },
       speakableIds: doc.sentenceIds,
       currentIndex: 0,
       isPlaying: false,

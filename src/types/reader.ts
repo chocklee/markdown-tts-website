@@ -41,6 +41,8 @@ export interface ReaderSettings {
   volume: number
   skipCode: boolean
   skipTable: boolean
+  sentencePause: boolean
+  sentencePauseSeconds: number
 }
 
 export const defaultSettings: ReaderSettings = {
@@ -48,4 +50,6 @@ export const defaultSettings: ReaderSettings = {
   volume: 1,
   skipCode: true,
   skipTable: true,
+  sentencePause: false,
+  sentencePauseSeconds: 2,
 }

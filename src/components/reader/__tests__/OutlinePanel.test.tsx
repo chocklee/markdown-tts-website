@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { OutlinePanel } from '../OutlinePanel'
 import { parseDocument } from '@/lib/markdown/parse'
 import { useReaderStore } from '@/lib/state/readerStore'
+import { defaultSettings } from '@/types/reader'
 
 const DOC = parseDocument('# 第一章\n你好。\n\n## 第二章\n继续。')
 
@@ -12,7 +13,7 @@ describe('OutlinePanel', () => {
   it('渲染章节标题并高亮当前章节', () => {
     useReaderStore.setState({
       document: DOC,
-      settings: { rate: 1, volume: 1, skipCode: true, skipTable: true },
+      settings: { ...defaultSettings },
       speakableIds: DOC.sentenceIds,
       currentIndex: 2,
       isPlaying: false,
@@ -29,7 +30,7 @@ describe('OutlinePanel', () => {
     const seekTo = vi.spyOn(useReaderStore.getState(), 'seekTo')
     useReaderStore.setState({
       document: DOC,
-      settings: { rate: 1, volume: 1, skipCode: true, skipTable: true },
+      settings: { ...defaultSettings },
       speakableIds: DOC.sentenceIds,
       currentIndex: 0,
       isPlaying: false,

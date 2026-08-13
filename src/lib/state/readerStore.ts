@@ -3,7 +3,7 @@ import type { ReaderDocument, ReaderSettings } from '@/types/reader'
 import { defaultSettings } from '@/types/reader'
 import { getSentenceText, getSpeakableIds } from './selectors'
 import { BrowserTtsEngine, type TtsEngine } from '@/lib/tts/engine'
-import { SpeechQueue } from '@/lib/tts/queue'
+import { SpeechQueue, type SpeechOptions } from '@/lib/tts/queue'
 
 interface ReaderState {
   document: ReaderDocument | null
@@ -23,8 +23,11 @@ interface ReaderState {
   prevChapter: () => void
   seekTo: (sentenceId: string) => void
   restoreIndex: (sentenceId: string) => void
+  getOptions: () => SpeechOptions
   setRate: (rate: number) => void
   setVolume: (volume: number) => void
+  setSentencePause: (enabled: boolean) => void
+  setSentencePauseSeconds: (seconds: number) => void
   toggleSkipCode: () => void
   toggleSkipTable: () => void
 }
@@ -32,7 +35,7 @@ interface ReaderState {
 function buildQueue(
   engine: TtsEngine,
   document: ReaderDocument,
-  getOptions: () => { rate: number; volume: number },
+  getOptions: () => SpeechOptions,
   onIndex: (i: number) => void,
   onEnd: () => void,
   onError: (message: string) => void,
@@ -61,7 +64,12 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     const queue = buildQueue(
       engineInstance,
       document,
-      () => ({ rate: get().settings.rate, volume: get().settings.volume }),
+      () => ({
+        rate: get().settings.rate,
+        volume: get().settings.volume,
+        sentencePause: get().settings.sentencePause,
+        sentencePauseSeconds: get().settings.sentencePauseSeconds,
+      }),
       (i) => set({ currentIndex: i }),
       () => set({ isPlaying: false }),
       (message) => {
@@ -164,6 +172,24 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     set((s) => ({ settings: { ...s.settings, volume } }))
   },
 
+  getOptions: () => {
+    const s = get().settings
+    return {
+      rate: s.rate,
+      volume: s.volume,
+      sentencePause: s.sentencePause,
+      sentencePauseSeconds: s.sentencePauseSeconds,
+    }
+  },
+
+  setSentencePause: (enabled) => {
+    set((s) => ({ settings: { ...s.settings, sentencePause: enabled } }))
+  },
+
+  setSentencePauseSeconds: (seconds) => {
+    set((s) => ({ settings: { ...s.settings, sentencePauseSeconds: seconds } }))
+  },
+
   toggleSkipCode: () => {
     set((s) => ({ settings: { ...s.settings, skipCode: !s.settings.skipCode } }))
     get().rebuildSpeakable()
@@ -183,7 +209,12 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     const newQueue = buildQueue(
       engine,
       document,
-      () => ({ rate: get().settings.rate, volume: get().settings.volume }),
+      () => ({
+        rate: get().settings.rate,
+        volume: get().settings.volume,
+        sentencePause: get().settings.sentencePause,
+        sentencePauseSeconds: get().settings.sentencePauseSeconds,
+      }),
       (i) => set({ currentIndex: i }),
       () => set({ isPlaying: false }),
       (message) => {

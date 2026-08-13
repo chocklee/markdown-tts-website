@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useReaderStore } from '../readerStore'
 import { parseDocument } from '@/lib/markdown/parse'
 import type { TtsEngine } from '@/lib/tts/engine'
+import { defaultSettings } from '@/types/reader'
 
 class FakeEngine implements TtsEngine {
   speakCalls: { text: string; onend: () => void }[] = []
@@ -26,7 +27,7 @@ const DOC = parseDocument(`# 第一章
 function freshStore() {
   useReaderStore.setState({
     document: null,
-    settings: { rate: 1, volume: 1, skipCode: true, skipTable: true },
+    settings: { ...defaultSettings },
     speakableIds: [],
     currentIndex: 0,
     isPlaying: false,
@@ -47,6 +48,20 @@ function playToEnd(engine: FakeEngine) {
 describe('readerStore', () => {
   beforeEach(() => {
     freshStore()
+  })
+
+  it('逐句模式开关与时长设置生效', () => {
+    const { store } = freshStore()
+    expect(store.settings.sentencePause).toBe(false)
+    expect(store.settings.sentencePauseSeconds).toBe(2)
+    store.setSentencePause(true)
+    store.setSentencePauseSeconds(5)
+    const state = useReaderStore.getState()
+    expect(state.settings.sentencePause).toBe(true)
+    expect(state.settings.sentencePauseSeconds).toBe(5)
+    const opts = state.getOptions()
+    expect(opts.sentencePause).toBe(true)
+    expect(opts.sentencePauseSeconds).toBe(5)
   })
 
   it('init 后生成可朗读句子列表', () => {
@@ -91,7 +106,7 @@ describe('readerStore', () => {
 
   it('toggleSkipCode 重建可朗读列表并保持当前句', () => {
     const doc = parseDocument('# 标题\n正文。\n\n```js\nconst a = 1\n```\n结尾。')
-    useReaderStore.setState({ settings: { rate: 1, volume: 1, skipCode: true, skipTable: true } })
+    useReaderStore.setState({ settings: { ...defaultSettings } })
     useReaderStore.getState().init(doc, new FakeEngine())
     useReaderStore.getState().seekTo('s2')
     useReaderStore.getState().toggleSkipCode()
@@ -147,7 +162,7 @@ describe('readerStore', () => {
 
   it('toggleSkipTable 重建可朗读列表并保持当前句', () => {
     const doc = parseDocument('# 标题\n正文。\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n结尾。')
-    useReaderStore.setState({ settings: { rate: 1, volume: 1, skipCode: true, skipTable: true } })
+    useReaderStore.setState({ settings: { ...defaultSettings } })
     useReaderStore.getState().init(doc, new FakeEngine())
     expect(useReaderStore.getState().speakableIds).toEqual(['s1', 's2'])
     useReaderStore.getState().seekTo('s2')
