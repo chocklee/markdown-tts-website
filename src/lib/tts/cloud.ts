@@ -14,6 +14,10 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes
 }
 
+function isAbortError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError'
+}
+
 export class CloudTtsEngine implements TtsEngine {
   private voice: string
   private audio: HTMLAudioElement | null = null
@@ -34,14 +38,15 @@ export class CloudTtsEngine implements TtsEngine {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, voice: this.voice, rate: options.rate }),
     })
-      .then((res) => {
-        if (!res.ok) {
-          if (res.status === 402) {
-            throw new Error('积分不足，请购买积分')
-          }
-          throw new Error('语音合成失败，请稍后再试')
+      .then(async (res) => {
+        if (res.ok) {
+          return (await res.json()) as SynthesizeResponse
         }
-        return res.json() as Promise<SynthesizeResponse>
+        if (res.status === 402) {
+          throw new Error('积分不足，请购买积分')
+        }
+        const body = (await res.json().catch(() => null)) as { error?: unknown } | null
+        throw new Error(typeof body?.error === 'string' ? body.error : '语音合成失败，请稍后再试')
       })
       .then((data) => {
         if (epoch !== this.epoch) return
@@ -51,10 +56,22 @@ export class CloudTtsEngine implements TtsEngine {
         this.audio = audio
         this.objectUrl = url
         audio.volume = options.volume
-        audio.onended = () => options.onend()
-        audio.onerror = () => options.onerror(new Error('语音合成失败'))
+        audio.onended = () => {
+          if (this.audio === audio) {
+            this.audio = null
+            this.revokeUrl()
+          }
+          options.onend()
+        }
+        audio.onerror = () => {
+          if (epoch !== this.epoch) return
+          options.onerror(new Error('语音合成失败'))
+        }
         if (this.paused) return
-        audio.play().catch((error) => options.onerror(error))
+        audio.play().catch((error) => {
+          if (epoch !== this.epoch || isAbortError(error)) return
+          options.onerror(error)
+        })
       })
       .catch((error) => {
         if (epoch !== this.epoch) return
@@ -70,7 +87,11 @@ export class CloudTtsEngine implements TtsEngine {
   resume(): void {
     this.paused = false
     const audio = this.audio
-    audio?.play().catch(() => audio.onerror?.(new Event('error')))
+    const epoch = this.epoch
+    audio?.play().catch((error) => {
+      if (epoch !== this.epoch || isAbortError(error)) return
+      audio.onerror?.(new Event('error'))
+    })
   }
 
   cancel(): void {
@@ -80,13 +101,17 @@ export class CloudTtsEngine implements TtsEngine {
       this.audio.pause()
       this.audio = null
     }
-    if (this.objectUrl) {
-      URL.revokeObjectURL(this.objectUrl)
-      this.objectUrl = null
-    }
+    this.revokeUrl()
   }
 
   get isSpeaking(): boolean {
     return this.audio !== null && !this.audio.paused && !this.audio.ended
+  }
+
+  private revokeUrl(): void {
+    if (this.objectUrl) {
+      URL.revokeObjectURL(this.objectUrl)
+      this.objectUrl = null
+    }
   }
 }

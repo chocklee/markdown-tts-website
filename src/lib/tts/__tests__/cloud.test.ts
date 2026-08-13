@@ -15,16 +15,24 @@ class MockAudio {
   volume = 1
   onended: (() => void) | null = null
   onerror: ((event: unknown) => void) | null = null
+  private resolvePendingPlay: (() => void) | null = null
+  private rejectPendingPlay: ((error: unknown) => void) | null = null
   play = vi.fn(() => {
     if (MockAudio.failNextPlay) {
       MockAudio.failNextPlay = false
       return Promise.reject(new Error('play failed'))
     }
     this.paused = false
-    return Promise.resolve()
+    return new Promise<void>((resolve, reject) => {
+      this.resolvePendingPlay = resolve
+      this.rejectPendingPlay = reject
+    })
   })
   pause = vi.fn(() => {
     this.paused = true
+    this.rejectPendingPlay?.(new DOMException('play interrupted', 'AbortError'))
+    this.resolvePendingPlay = null
+    this.rejectPendingPlay = null
   })
 
   constructor(readonly src: string) {
@@ -32,12 +40,18 @@ class MockAudio {
   }
 
   fireEnded(): void {
+    this.resolvePendingPlay?.()
+    this.resolvePendingPlay = null
+    this.rejectPendingPlay = null
     this.ended = true
     this.paused = true
     this.onended?.()
   }
 
   fireError(): void {
+    this.rejectPendingPlay?.(new DOMException('play interrupted', 'AbortError'))
+    this.resolvePendingPlay = null
+    this.rejectPendingPlay = null
     this.onerror?.(new Event('error'))
   }
 }
@@ -65,8 +79,7 @@ describe('CloudTtsEngine', () => {
     MockAudio.failNextPlay = false
     createObjectURL = vi.fn((..._args: unknown[]) => MOCK_AUDIO_URL)
     revokeObjectURL = vi.fn()
-    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL })
-    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL })
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL })
     vi.stubGlobal('Audio', MockAudio)
   })
 
@@ -103,11 +116,12 @@ describe('CloudTtsEngine', () => {
 
     audio.fireEnded()
     expect(onend).toHaveBeenCalledOnce()
+    expect(revokeObjectURL).toHaveBeenCalledWith(MOCK_AUDIO_URL)
     expect(engine.isSpeaking).toBe(false)
   })
 
   it('余额不足返回 402 时 onerror 提示购买积分', async () => {
-    mockFetchResolved(402, { error: '积分不足，请购买积分' })
+    mockFetchResolved(402, { error: 'unexpected server text' })
     const engine = new CloudTtsEngine('nova')
     const onend = vi.fn()
     const onerror = vi.fn()
@@ -122,7 +136,7 @@ describe('CloudTtsEngine', () => {
   })
 
   it('其他服务端错误时 onerror 提示稍后再试', async () => {
-    mockFetchResolved(500, { error: '语音合成失败，请稍后再试' })
+    mockFetchResolved(500, {})
     const engine = new CloudTtsEngine('nova')
     const onend = vi.fn()
     const onerror = vi.fn()
@@ -132,6 +146,20 @@ describe('CloudTtsEngine', () => {
 
     expect(onerror).toHaveBeenCalledTimes(1)
     expect((onerror.mock.calls[0][0] as Error).message).toBe('语音合成失败，请稍后再试')
+    expect(MockAudio.instances).toHaveLength(0)
+  })
+
+  it('非 402 错误透传服务端 error 文案', async () => {
+    mockFetchResolved(429, { error: '操作过于频繁' })
+    const engine = new CloudTtsEngine('nova')
+    const onend = vi.fn()
+    const onerror = vi.fn()
+    engine.speak('你好', { rate: 1, volume: 1, onend, onerror })
+
+    await flush()
+
+    expect(onerror).toHaveBeenCalledTimes(1)
+    expect((onerror.mock.calls[0][0] as Error).message).toBe('操作过于频繁')
     expect(MockAudio.instances).toHaveLength(0)
   })
 
@@ -192,6 +220,31 @@ describe('CloudTtsEngine', () => {
 
     engine.resume()
     expect(audio.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('play 挂起时 pause 触发 AbortError 不误报 onerror，resume 可继续', async () => {
+    mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    const onend = vi.fn()
+    const onerror = vi.fn()
+    engine.speak('你好', { rate: 1, volume: 1, onend, onerror })
+    await flush()
+    const audio = MockAudio.instances[0]
+    expect(audio.play).toHaveBeenCalledOnce()
+    expect(engine.isSpeaking).toBe(true)
+
+    engine.pause()
+    await flush()
+
+    expect(onerror).not.toHaveBeenCalled()
+    expect(onend).not.toHaveBeenCalled()
+
+    engine.resume()
+    await flush()
+
+    expect(audio.play).toHaveBeenCalledTimes(2)
+    expect(engine.isSpeaking).toBe(true)
+    expect(onerror).not.toHaveBeenCalled()
   })
 
   it('fetch 在途时 cancel，响应到达后不创建不播放音频', async () => {
