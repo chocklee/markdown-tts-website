@@ -1682,7 +1682,7 @@ git commit -m "feat(library): add trash cleanup cron"
 **Files:**
 - Modify: `src/app/login/page.tsx`
 
-- [ ] **Step 1: 登录成功与 Google 回跳改为文档库**
+- [x] **Step 1: 登录成功与 Google 回跳改为文档库**
 
 `src/app/login/page.tsx`：
 
@@ -1695,7 +1695,7 @@ router.refresh()
 onClick={() => void signIn('google', { callbackUrl: '/library' })}
 ```
 
-- [ ] **Step 2: 自动化检查**
+- [x] **Step 2: 自动化检查**
 
 Run: `npm run test && npx tsc --noEmit && npm run lint && npm run build`
 Expected: 全部通过
