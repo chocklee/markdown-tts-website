@@ -20,7 +20,7 @@
 - Test: `src/lib/storage/__tests__/library.test.ts`
 - Modify: `src/test/setup.ts`
 
-^- [x] **Step 1: 在 `src/test/setup.ts` 顶部加入 fake-indexeddb**
+- [x] **Step 1: 在 `src/test/setup.ts` 顶部加入 fake-indexeddb**
 
 ```ts
 import 'fake-indexeddb/auto'
@@ -31,7 +31,7 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
 }
 ```
 
-^- [x] **Step 2: 写失败测试 `src/lib/storage/__tests__/library.test.ts`**
+- [x] **Step 2: 写失败测试 `src/lib/storage/__tests__/library.test.ts`**
 
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -86,12 +86,12 @@ describe('IndexedDB 文档库', () => {
 })
 ```
 
-^- [x] **Step 3: 运行确认失败**
+- [x] **Step 3: 运行确认失败**
 
 Run: `npx vitest run src/lib/storage/__tests__/library.test.ts`
 Expected: FAIL（`@/types/document` / `../library` 不存在）
 
-^- [x] **Step 4: 创建 `src/types/document.ts`**
+- [x] **Step 4: 创建 `src/types/document.ts`**
 
 ```ts
 export interface SyncedDocument {
@@ -119,7 +119,7 @@ export function contentHashOf(content: string): string {
 }
 ```
 
-^- [x] **Step 5: 创建 `src/lib/storage/library.ts`**
+- [x] **Step 5: 创建 `src/lib/storage/library.ts`**
 
 ```ts
 import type { LibraryDocument } from '@/types/document'
@@ -189,12 +189,12 @@ export async function deleteDocument(docId: string): Promise<void> {
 }
 ```
 
-^- [x] **Step 6: 运行确认通过**
+- [x] **Step 6: 运行确认通过**
 
 Run: `npx vitest run src/lib/storage/__tests__/library.test.ts`
 Expected: 4 个用例 PASS
 
-^- [x] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 git add src/types/document.ts src/lib/storage/library.ts src/lib/storage/__tests__/library.test.ts src/test/setup.ts
