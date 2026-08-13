@@ -10,7 +10,7 @@ interface DocumentRow {
   title: string
   content_md: string
   content_hash: string
-  file_size_bytes: string
+  file_size_bytes: number
   updated_at: string
   deleted_at: string | null
   delete_expires_at: string | null
@@ -22,7 +22,7 @@ function rowToSyncedDocument(row: DocumentRow): SyncedDocument {
     title: row.title,
     content: row.content_md,
     contentHash: row.content_hash,
-    fileSizeBytes: Number(row.file_size_bytes),
+    fileSizeBytes: row.file_size_bytes,
     updatedAt: Number(row.updated_at),
     deletedAt: row.deleted_at === null ? null : Number(row.deleted_at),
     deleteExpiresAt: row.delete_expires_at === null ? null : Number(row.delete_expires_at),
@@ -70,6 +70,7 @@ export async function upsertServerDocument(userId: string, doc: SyncedDocument):
   const serverSize = Buffer.byteLength(doc.content, 'utf8')
   const sized = { ...doc, fileSizeBytes: serverSize }
 
+  // 配额检查与插入之间存在竞态窗口，单用户规模下可接受
   const quotaBytes = await getUserQuotaBytes(userId)
   const { rows: usedRows } = await pool.query<{ used: string }>(
     `SELECT COALESCE(SUM(CASE WHEN deleted_at IS NULL AND doc_id <> $2 THEN file_size_bytes ELSE 0 END), 0) AS used
@@ -90,6 +91,8 @@ export async function upsertServerDocument(userId: string, doc: SyncedDocument):
        updated_at = EXCLUDED.updated_at,
        deleted_at = EXCLUDED.deleted_at,
        delete_expires_at = EXCLUDED.delete_expires_at
+     -- <= 表示 updated_at 相等时以新写入为准（last-write-wins）：
+     -- 幂等重试不会误报 409，客户端每次保存递增 updatedAt，相等情况极少
      WHERE documents.updated_at <= EXCLUDED.updated_at`,
     [userId, sized.docId, sized.title, sized.content, sized.contentHash, sized.fileSizeBytes, sized.updatedAt, sized.deletedAt, sized.deleteExpiresAt],
   )
