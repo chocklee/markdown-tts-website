@@ -16,6 +16,7 @@
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | 可选 | Google Cloud Console 创建 OAuth Client，配置后才显示 Google 登录按钮 |
 | `STRIPE_SECRET_KEY` | 支付上线前 | Stripe 密钥；测试用 `sk_test_...`，上线切 `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | 支付上线前 | Stripe Webhook 签名密钥 `whsec_...`；本地联调用 `stripe listen --forward-to localhost:3000/api/webhooks/stripe` |
+| `OPENAI_API_KEY` | 云语音 | [platform.openai.com](https://platform.openai.com) → API Keys；不配置则阅读器只有浏览器语音，云端音色合成返回错误 |
 
 本地开发时把同样的变量填到 `.env.local`（已被 `.gitignore` 忽略，不会提交）。
 
@@ -23,7 +24,7 @@
 
 - 迁移脚本：`npm run db:migrate`（读取 `.env.local` 的 `DATABASE_URL`）。
 - Vercel 构建**不会**自动跑迁移，需要在本地或任意有连接串的环境手动执行。
-- 已应用的迁移：`001_auth.sql`、`002_auth_adapter_fix.sql`、`004_auth_hardening.sql`、`005_documents.sql`。
+- 已应用的迁移：`001_auth.sql`、`002_auth_adapter_fix.sql`、`004_auth_hardening.sql`、`005_documents.sql`、`006_credits.sql`、`007_tts_cache.sql`、`008_tts_cache_rate.sql`。
 - 新迁移文件放在 `db/migrations/`，命名保持递增序号。
 
 ## 三、Resend 域名验证（正式发信前）
@@ -59,6 +60,17 @@
 6. 未购买账号打开阅读器设置 → 逐句模式显示锁定态；购买后显示开关与暂停时长（1–10 秒）
 7. 逐句模式开启后播放：每句播完暂停 N 秒自动继续；手动暂停时停止自动继续
 8. 本地联调 Webhook：`stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+
+## 五·C、M2c 云端 AI 语音验证清单
+
+1. 注册新账号 → `/api/credits/balance` 返回 `creditsBalance: 50`
+2. 阅读器设置 → 音色下拉显示「浏览器语音」+ 4 个云端音色（Alloy / Nova / Shimmer / Echo）
+3. 选择云端音色播放 → 逐句请求 `/api/tts/synthesize`，余额按字数减少（100 字 = 3 积分）
+4. 同一句重放 → 命中缓存不扣积分（返回 `creditsCharged: 0`）
+5. `/credits` 消费流水出现 tts 合成记录
+6. 余额耗尽后播放 → 提示「积分不足，请购买积分」并停止；切回浏览器语音可继续
+7. 未配置 `OPENAI_API_KEY` 时：`/api/tts/voices` 仍返回音色列表，但合成返回 500，不影响浏览器语音
+8. 音色切换在播放中生效：切换后从当前句重新开始（停止旧引擎、重建队列）
 
 ## 六、已知事项
 
