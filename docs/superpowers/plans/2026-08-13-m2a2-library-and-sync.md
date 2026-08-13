@@ -1347,11 +1347,11 @@ git commit -m "feat(library): save to library and open reader by docId"
 - Create: `src/app/library/page.tsx`
 - Modify: `src/components/layout/Header.tsx`
 
-- [ ] **Step 1: 创建 `src/app/library/page.tsx`**
+- [x] **Step 1: 创建 `src/app/library/page.tsx`**
 
 ```tsx
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { listDocuments, getDocument } from '@/lib/storage/library'
@@ -1388,7 +1388,7 @@ function daysLeft(expiresAt: number): number {
 }
 
 export default function LibraryPage() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const [docs, setDocs] = useState<LibraryDocument[]>([])
   const [tab, setTab] = useState<Tab>('docs')
   const [quota, setQuota] = useState<{ usedBytes: number; quotaBytes: number } | null>(null)
@@ -1396,6 +1396,7 @@ export default function LibraryPage() {
   const [renameValue, setRenameValue] = useState('')
   const [notice, setNotice] = useState('')
   const [syncing, setSyncing] = useState(false)
+  const syncingRef = useRef(false)
 
   const refresh = useCallback(async () => {
     const all = await listDocuments()
@@ -1403,21 +1404,24 @@ export default function LibraryPage() {
   }, [])
 
   const sync = useCallback(async () => {
-    if (status !== 'authenticated') return
+    if (status !== 'authenticated' || syncingRef.current) return
+    syncingRef.current = true
     setSyncing(true)
     try {
       const result = await runSync()
-      if (result.error) setNotice(result.error)
-      if (result.quotaBytes !== null) {
-        const all = await listDocuments()
-        setQuota({ usedBytes: activeBytes(all), quotaBytes: result.quotaBytes })
-      }
-      if (result.uploaded + result.downloaded > 0) {
+      if (result.error) {
+        setNotice(result.error)
+      } else if (result.uploaded + result.downloaded > 0) {
         setNotice(`已同步：上传 ${result.uploaded} 篇，下载 ${result.downloaded} 篇`)
       }
+      if (result.quotaBytes !== null) {
+        const all = await listDocuments().catch(() => null)
+        if (all) setQuota({ usedBytes: activeBytes(all), quotaBytes: result.quotaBytes })
+      }
     } finally {
+      syncingRef.current = false
       setSyncing(false)
-      await refresh()
+      await refresh().catch(() => {})
     }
   }, [status, refresh])
 
@@ -1447,20 +1451,20 @@ export default function LibraryPage() {
   async function confirmRename() {
     if (!renaming) return
     await renameDocument(renaming, renameValue)
-    scheduleSync()
+    if (status === 'authenticated') scheduleSync()
     setRenaming(null)
     await refresh()
   }
 
   async function remove(docId: string) {
     await softDeleteDocument(docId)
-    scheduleSync()
+    if (status === 'authenticated') scheduleSync()
     await refresh()
   }
 
   async function doRestore(docId: string) {
     await restoreDocument(docId)
-    scheduleSync()
+    if (status === 'authenticated') scheduleSync()
     await refresh()
   }
 
@@ -1594,7 +1598,7 @@ export default function LibraryPage() {
 }
 ```
 
-- [ ] **Step 2: 修改 `src/components/layout/Header.tsx` 加入文档库入口**
+- [x] **Step 2: 修改 `src/components/layout/Header.tsx` 加入文档库入口**
 
 在 `nav` 的登录/退出按钮之前加：
 
@@ -1604,14 +1608,14 @@ export default function LibraryPage() {
 </Link>
 ```
 
-- [ ] **Step 3: 验证**
+- [x] **Step 3: 验证**
 
 Run: `npm run test && npx tsc --noEmit && npm run lint`
 Expected: 通过
 
 手动：未登录访问 `/library` 显示本机文档 + 登录提示；登录后自动同步，配额显示；重命名/删除即时生效。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add src/app/library/page.tsx src/components/layout/Header.tsx
