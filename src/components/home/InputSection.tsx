@@ -2,9 +2,15 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { parseDocument } from '@/lib/markdown/parse'
-import { saveDocument } from '@/lib/storage/local'
+import { saveDocumentToLibrary } from '@/lib/library/actions'
+import { scheduleSync } from '@/lib/sync/schedule'
+import type { LibraryDocument } from '@/types/document'
 
 const MAX_SIZE = 5 * 1024 * 1024
+
+function byteLength(s: string): number {
+  return new TextEncoder().encode(s).length
+}
 
 export default function InputSection() {
   const router = useRouter()
@@ -45,7 +51,7 @@ export default function InputSection() {
     reader.readAsText(file, 'utf-8')
   }
 
-  function start() {
+  async function start() {
     if (reading) {
       setError('文件读取中，请稍候')
       return
@@ -55,18 +61,20 @@ export default function InputSection() {
       setError('请粘贴内容或选择文件')
       return
     }
-    if (content.length > MAX_SIZE) {
+    if (byteLength(content) > MAX_SIZE) {
       setError('内容超过 5MB 上限')
       return
     }
     const doc = parseDocument(content, fileName || '未命名文档')
+    let stored: LibraryDocument
     try {
-      saveDocument({ id: doc.id, title: doc.title, content, savedAt: Date.now() })
+      stored = await saveDocumentToLibrary({ title: doc.title, content })
     } catch {
       setError('保存失败，内容过大')
       return
     }
-    router.push('/reader')
+    scheduleSync()
+    router.push(`/reader?docId=${encodeURIComponent(stored.docId)}`)
   }
 
   return (
@@ -103,7 +111,7 @@ export default function InputSection() {
             type="button"
             className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             disabled={reading}
-            onClick={start}
+            onClick={() => void start()}
           >
             开始收听
           </button>

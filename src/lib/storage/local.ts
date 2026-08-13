@@ -44,13 +44,3 @@ export function loadPosition(docId: string): string | null {
 export function clearPosition(): void {
   localStorage.removeItem(POS_KEY)
 }
-
-/** @deprecated 兼容 M1 调用方，Task 7 移除 */
-export function saveDocument(doc: LegacyStoredDocument): void {
-  localStorage.setItem(LEGACY_DOC_KEY, JSON.stringify(doc))
-}
-
-/** @deprecated 兼容 M1 调用方，Task 7 移除 */
-export function loadDocument(): LegacyStoredDocument | null {
-  return loadLegacyDocument()
-}
