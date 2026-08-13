@@ -516,10 +516,19 @@ git commit -m "feat(auth): add Auth.js v5 instance with credentials and google p
 `src/lib/security/__tests__/rateLimit.test.ts`:
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { isRateLimited } from '../rateLimit'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { isRateLimited, clientIp } from '../rateLimit'
 
 describe('isRateLimited', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('第 1~3 次放行，第 4 次拦截', () => {
     const key = 'ip:1'
     expect(isRateLimited(key, 3, 60_000)).toBe(false)
@@ -529,7 +538,19 @@ describe('isRateLimited', () => {
   })
 
   it('窗口过期后计数重置', () => {
-    expect(isRateLimited('ip:2', 1, -1000)).toBe(false)
+    const key = 'ip:2'
+    expect(isRateLimited(key, 1, 60_000)).toBe(false)
+    vi.setSystemTime(new Date('2026-01-01T00:01:01Z'))
+    expect(isRateLimited(key, 1, 60_000)).toBe(false)
+    expect(isRateLimited(key, 1, 60_000)).toBe(true)
+  })
+
+  it('clientIp 解析 x-forwarded-for', () => {
+    const req = (value: string | null) =>
+      ({ headers: { get: (name: string) => (name === 'x-forwarded-for' ? value : null) } }) as unknown as Request
+    expect(clientIp(req('1.2.3.4, 5.6.7.8'))).toBe('1.2.3.4')
+    expect(clientIp(req(' 1.2.3.4 '))).toBe('1.2.3.4')
+    expect(clientIp(req(null))).toBe('unknown')
   })
 })
 ```
@@ -546,6 +567,11 @@ const buckets = new Map<string, { count: number; resetAt: number }>()
 
 export function isRateLimited(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now()
+  if (buckets.size > 1000) {
+    for (const [k, entry] of buckets) {
+      if (entry.resetAt < now) buckets.delete(k)
+    }
+  }
   const entry = buckets.get(key)
   if (!entry || entry.resetAt < now) {
     buckets.set(key, { count: 1, resetAt: now + windowMs })
@@ -555,6 +581,7 @@ export function isRateLimited(key: string, limit: number, windowMs: number): boo
   return entry.count > limit
 }
 
+// 依赖平台覆盖 X-Forwarded-For（Vercel 行为），取最左值作为客户端 IP
 export function clientIp(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
 }
@@ -570,7 +597,17 @@ Expected: 2 个用例 PASS
 ```ts
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY ?? '')
+let resend: Resend | null = null
+
+function getResend(): Resend {
+  if (!resend) {
+    const key = process.env.RESEND_API_KEY
+    if (!key) throw new Error('RESEND_API_KEY 未配置')
+    resend = new Resend(key)
+  }
+  return resend
+}
+
 const FROM = process.env.EMAIL_FROM ?? '听 Markdown <onboarding@resend.dev>'
 
 export function appUrl(): string {
@@ -584,30 +621,33 @@ const baseHtml = (title: string, bodyHtml: string) => `
   <p style="color:#94a3b8;font-size:12px;margin-top:24px">听 Markdown — 把文字变成声音</p>
 </div>`
 
+async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  const result = await getResend().emails.send({ from: FROM, to, subject, html })
+  if (result.error) throw new Error(result.error.message)
+}
+
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
   const link = `${appUrl()}/verify-email?token=${encodeURIComponent(token)}`
-  await resend.emails.send({
-    from: FROM,
-    to: email,
-    subject: '验证你的邮箱 — 听 Markdown',
-    html: baseHtml(
+  await sendEmail(
+    email,
+    '验证你的邮箱 — 听 Markdown',
+    baseHtml(
       '验证你的邮箱',
       `<p>点击下面的链接完成邮箱验证（24 小时内有效）：</p><p><a href="${link}">${link}</a></p><p>如果不是你本人操作，请忽略此邮件。</p>`,
     ),
-  })
+  )
 }
 
 export async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
   const link = `${appUrl()}/reset-password?token=${encodeURIComponent(token)}`
-  await resend.emails.send({
-    from: FROM,
-    to: email,
-    subject: '重置密码 — 听 Markdown',
-    html: baseHtml(
+  await sendEmail(
+    email,
+    '重置密码 — 听 Markdown',
+    baseHtml(
       '重置你的密码',
       `<p>点击下面的链接设置新密码（24 小时内有效）：</p><p><a href="${link}">${link}</a></p><p>如果不是你本人操作，请忽略此邮件。</p>`,
     ),
-  })
+  )
 }
 ```
 
