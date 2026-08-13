@@ -989,7 +989,7 @@ git commit -m "feat(library): add sync plan engine"
 - Create: `src/lib/sync/manager.ts`
 - Create: `src/lib/sync/schedule.ts`
 
-- [ ] **Step 1: 创建 `src/lib/sync/manager.ts`**
+^- [x] **Step 1: 创建 `src/lib/sync/manager.ts`**
 
 ```ts
 import type { LibraryDocument, SyncedDocument } from '@/types/document'
@@ -1048,7 +1048,7 @@ export async function runSync(): Promise<SyncResult> {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/lib/sync/schedule.ts`**
+^- [x] **Step 2: 创建 `src/lib/sync/schedule.ts`**
 
 ```ts
 let timer: ReturnType<typeof setTimeout> | null = null
@@ -1080,7 +1080,7 @@ async function flushSync(): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: 提交**
+^- [x] **Step 3: 提交**
 
 ```bash
 git add src/lib/sync/manager.ts src/lib/sync/schedule.ts
