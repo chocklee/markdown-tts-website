@@ -49,4 +49,21 @@ describe('hashPassword / verifyPassword', () => {
     expect(verifyPassword('abc12345', `scrypt$999$8$1$${salt}$${hash}`)).toBe(false)
     expect(verifyPassword('abc12345', `scrypt$16384$999$1$${salt}$${hash}`)).toBe(false)
   })
+  it('范围内但不可执行的参数（N 非 2 的幂）直接拒绝不抛异常', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$16385$8$1$${salt}$${hash}`)).toBe(false)
+  })
+
+  it('超过 Node maxmem 的参数（N=65536）直接拒绝不抛异常', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$65536$8$1$${salt}$${hash}`)).toBe(false)
+  })
+
+  it('非十进制写法参数直接拒绝', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$0x4000$8$1$${salt}$${hash}`)).toBe(false)
+  })
 })

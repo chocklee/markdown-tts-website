@@ -288,6 +288,24 @@ describe('hashPassword / verifyPassword', () => {
     expect(verifyPassword('abc12345', `scrypt$999$8$1$${salt}$${hash}`)).toBe(false)
     expect(verifyPassword('abc12345', `scrypt$16384$999$1$${salt}$${hash}`)).toBe(false)
   })
+
+  it('范围内但不可执行的参数（N 非 2 的幂）直接拒绝不抛异常', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$16385$8$1$${salt}$${hash}`)).toBe(false)
+  })
+
+  it('超过 Node maxmem 的参数（N=65536）直接拒绝不抛异常', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$65536$8$1$${salt}$${hash}`)).toBe(false)
+  })
+
+  it('非十进制写法参数直接拒绝', () => {
+    const salt = 'a'.repeat(32)
+    const hash = 'b'.repeat(128)
+    expect(verifyPassword('abc12345', `scrypt$0x4000$8$1$${salt}$${hash}`)).toBe(false)
+  })
 })
 ```
 
@@ -322,12 +340,18 @@ export function verifyPassword(password: string, stored: string): boolean {
   const [, n, r, p, salt, expectedHex] = parts
   if (!/^[0-9a-f]{32}$/.test(salt)) return false
   if (!/^[0-9a-f]{128}$/.test(expectedHex)) return false
+  if (!/^\d+$/.test(n) || !/^\d+$/.test(r) || !/^\d+$/.test(p)) return false
   const costN = Number(n)
   const costR = Number(r)
   const costP = Number(p)
   if (!Number.isInteger(costN) || !Number.isInteger(costR) || !Number.isInteger(costP)) return false
   if (costN < 1024 || costN > 2 ** 24 || costR < 1 || costR > 64 || costP < 1 || costP > 16) return false
-  const candidate = scryptSync(password, salt, SCRYPT_KEYLEN, { N: costN, r: costR, p: costP })
+  let candidate: Buffer
+  try {
+    candidate = scryptSync(password, salt, SCRYPT_KEYLEN, { N: costN, r: costR, p: costP })
+  } catch {
+    return false
+  }
   const expected = Buffer.from(expectedHex, 'hex')
   return candidate.length === expected.length && timingSafeEqual(candidate, expected)
 }

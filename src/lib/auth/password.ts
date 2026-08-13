@@ -21,12 +21,18 @@ export function verifyPassword(password: string, stored: string): boolean {
   const [, n, r, p, salt, expectedHex] = parts
   if (!/^[0-9a-f]{32}$/.test(salt)) return false
   if (!/^[0-9a-f]{128}$/.test(expectedHex)) return false
+  if (!/^\d+$/.test(n) || !/^\d+$/.test(r) || !/^\d+$/.test(p)) return false
   const costN = Number(n)
   const costR = Number(r)
   const costP = Number(p)
   if (!Number.isInteger(costN) || !Number.isInteger(costR) || !Number.isInteger(costP)) return false
   if (costN < 1024 || costN > 2 ** 24 || costR < 1 || costR > 64 || costP < 1 || costP > 16) return false
-  const candidate = scryptSync(password, salt, SCRYPT_KEYLEN, { N: costN, r: costR, p: costP })
+  let candidate: Buffer
+  try {
+    candidate = scryptSync(password, salt, SCRYPT_KEYLEN, { N: costN, r: costR, p: costP })
+  } catch {
+    return false
+  }
   const expected = Buffer.from(expectedHex, 'hex')
   return candidate.length === expected.length && timingSafeEqual(candidate, expected)
 }
