@@ -1,4 +1,5 @@
 import { CONFIG } from '@/lib/config'
+import { doubaoProvider } from './doubao'
 import { openaiProvider } from './openai'
 
 export interface TtsProvider {
@@ -12,6 +13,7 @@ export interface TtsProvider {
 }
 
 const providers: Record<string, TtsProvider> = {
+  doubao: doubaoProvider,
   openai: openaiProvider,
 }
 
