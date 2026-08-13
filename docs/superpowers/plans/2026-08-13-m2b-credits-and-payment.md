@@ -20,7 +20,7 @@
 - Modify: `docs/DEPLOYMENT.md`（环境变量表加 STRIPE 两项）
 - Modify: `.env.example`（加 STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET）
 
-- [ ] **Step 1: 写迁移 `db/migrations/006_credits.sql`**
+- [x] **Step 1: 写迁移 `db/migrations/006_credits.sql`**
 
 ```sql
 -- 积分账户 + 流水
@@ -46,7 +46,7 @@ WHERE storage_quota_bytes < 104857600;
 ALTER TABLE users ALTER COLUMN storage_quota_bytes SET DEFAULT 104857600;
 ```
 
-- [ ] **Step 2: 扩展 `src/lib/config.ts`**
+- [x] **Step 2: 扩展 `src/lib/config.ts`**
 
 ```ts
 export const CREDIT_PACKAGES = [
@@ -71,17 +71,17 @@ export const CONFIG = {
 } as const
 ```
 
-- [ ] **Step 3: 跑迁移**
+- [x] **Step 3: 跑迁移**
 
 Run: `npm run db:migrate` → 期望输出 `applied 006_credits.sql`；再跑一次验证幂等。
 
-- [ ] **Step 4: 验证数据库**
+- [x] **Step 4: 验证数据库**
 
 Run: `psql $DATABASE_URL -c "\\d credit_transactions"` 或 node 脚本查询 `users.credits_balance` 列存在。
 
-- [ ] **Step 5: 更新 `.env.example` 与 `docs/DEPLOYMENT.md`**（加 `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`，标注测试模式）
+- [x] **Step 5: 更新 `.env.example` 与 `docs/DEPLOYMENT.md`**（加 `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`，标注测试模式）
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add db/migrations/006_credits.sql src/lib/config.ts .env.example docs/DEPLOYMENT.md
@@ -96,7 +96,7 @@ git commit -m "feat(credits): add credits schema, config center, quota 100MB/1G"
 - Create: `src/lib/db/credits.ts`
 - Test: `src/lib/db/__tests__/credits.test.ts`
 
-- [ ] **Step 1: 写失败测试 `src/lib/db/__tests__/credits.test.ts`**（纯函数，沿用 `documents.test.ts` 风格，不碰真实 DB）
+- [x] **Step 1: 写失败测试 `src/lib/db/__tests__/credits.test.ts`**（纯函数，沿用 `documents.test.ts` 风格，不碰真实 DB）
 
 ```ts
 import { describe, it, expect } from 'vitest'
@@ -125,11 +125,11 @@ describe('mapTransactionRow', () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `npx vitest run src/lib/db/__tests__/credits.test.ts` → 期望 FAIL（模块不存在 / 函数未定义）
 
-- [ ] **Step 3: 实现 `src/lib/db/credits.ts`**
+- [x] **Step 3: 实现 `src/lib/db/credits.ts`**
 
 ```ts
 import { pool } from '@/lib/db/pool'
@@ -249,11 +249,11 @@ const { rows } = await client.query(
 if (rows.length === 0) { await client.query('ROLLBACK'); return }
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 Run: `npx vitest run src/lib/db/__tests__/credits.test.ts` → 期望 PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/db/credits.ts src/lib/db/__tests__/credits.test.ts
@@ -268,7 +268,7 @@ git commit -m "feat(credits): credits db layer with cursor pagination and idempo
 - Modify: `src/app/api/auth/register/route.ts`
 - Modify: `src/lib/auth/config.ts`（`events.createUser` 钩子）
 
-- [ ] **Step 1: 写失败测试（纯函数辅助）**
+- [x] **Step 1: 写失败测试（纯函数辅助）**
 
 在 `src/lib/db/__tests__/credits.test.ts` 追加：`grantSignupBonusIfNew` 已有「已有流水则不重复赠送」逻辑，测试覆盖判断函数：
 
@@ -280,13 +280,13 @@ describe('grantSignupBonusIfNew 的赠送条件', () => {
 })
 ```
 
-- [ ] **Step 2: 修改注册路由**：在现有 `INSERT INTO users` 后、`COMMIT` 前，调用 `grantSignupBonusIfNew(userId, CONFIG.credits.bonusOnRegister)`（注意该函数自开事务，需改为接收 client 或拆出事务内版本 —— 推荐把 bonus 逻辑做成 `grantSignupBonus(client, userId)` 便于复用）
+- [x] **Step 2: 修改注册路由**：在现有 `INSERT INTO users` 后、`COMMIT` 前，调用 `grantSignupBonusIfNew(userId, CONFIG.credits.bonusOnRegister)`（注意该函数自开事务，需改为接收 client 或拆出事务内版本 —— 推荐把 bonus 逻辑做成 `grantSignupBonus(client, userId)` 便于复用）
 
-- [ ] **Step 3: 修改 `src/lib/auth/config.ts`**：加 `events: { async createUser({ user }) { await grantSignupBonusIfNew(user.id, CONFIG.credits.bonusOnRegister) } }`（Google OAuth 首次登录触发；邮箱注册走 register 路由，不经过 Auth.js createUser）
+- [x] **Step 3: 修改 `src/lib/auth/config.ts`**：加 `events: { async createUser({ user }) { await grantSignupBonusIfNew(user.id, CONFIG.credits.bonusOnRegister) } }`（Google OAuth 首次登录触发；邮箱注册走 register 路由，不经过 Auth.js createUser）
 
-- [ ] **Step 4: 跑相关测试**：`npx vitest run src/lib/db src/lib/auth src/app/login` → 全 PASS
+- [x] **Step 4: 跑相关测试**：`npx vitest run src/lib/db src/lib/auth src/app/login` → 全 PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -am "feat(credits): grant 50 signup bonus credits on register and Google signup"
@@ -301,11 +301,11 @@ git commit -am "feat(credits): grant 50 signup bonus credits on register and Goo
 - Create: `src/app/api/credits/transactions/route.ts`
 - Create: `src/app/api/credits/packages/route.ts`
 
-- [ ] **Step 1: 写失败测试**（沿用现有路由测试风格——当前仓库没有 API 路由测试；以组件/纯函数测试为主，路由用 curl 冒烟）
+- [x] **Step 1: 写失败测试**（沿用现有路由测试风格——当前仓库没有 API 路由测试；以组件/纯函数测试为主，路由用 curl 冒烟）
 
 在 `src/lib/db/__tests__/credits.test.ts` 补 `listTransactions` 的分页纯逻辑测试（用注入 rows 的 helper，若实现拆出 `pageRows(rows, limit)` 纯函数则直接测它）
 
-- [ ] **Step 2: 实现 `balance/route.ts`**（仿 `src/app/api/documents/route.ts`）
+- [x] **Step 2: 实现 `balance/route.ts`**（仿 `src/app/api/documents/route.ts`）
 
 ```ts
 export async function GET() {
@@ -318,13 +318,13 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 3: 实现 `transactions/route.ts`**：`?cursor=&limit=`（limit 默认 20、上限 50），返回 `{ items, nextCursor }`
+- [x] **Step 3: 实现 `transactions/route.ts`**：`?cursor=&limit=`（limit 默认 20、上限 50），返回 `{ items, nextCursor }`
 
-- [ ] **Step 4: 实现 `packages/route.ts`**（公开，返回 CREDIT_PACKAGES 的展示字段 + 可朗读字数估算）
+- [x] **Step 4: 实现 `packages/route.ts`**（公开，返回 CREDIT_PACKAGES 的展示字段 + 可朗读字数估算）
 
-- [ ] **Step 5: 本地冒烟**：dev server 起来后 `curl localhost:3000/api/credits/packages` 返回三档套餐
+- [x] **Step 5: 本地冒烟**：dev server 起来后 `curl localhost:3000/api/credits/packages` 返回三档套餐
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git commit -am "feat(credits): balance, transactions and packages read APIs"
@@ -340,13 +340,13 @@ git commit -am "feat(credits): balance, transactions and packages read APIs"
 - Create: `src/app/api/webhooks/stripe/route.ts`
 - Test: `src/lib/payments/__tests__/stripe.test.ts`
 
-- [ ] **Step 1: 安装 stripe**
+- [x] **Step 1: 安装 stripe**
 
 ```bash
 npm install stripe
 ```
 
-- [ ] **Step 2: 写失败测试 `src/lib/payments/__tests__/stripe.test.ts`**
+- [x] **Step 2: 写失败测试 `src/lib/payments/__tests__/stripe.test.ts`**
 
 ```ts
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -376,7 +376,7 @@ describe('createCheckoutSession', () => {
 })
 ```
 
-- [ ] **Step 3: 实现 `src/lib/payments/stripe.ts`**
+- [x] **Step 3: 实现 `src/lib/payments/stripe.ts`**
 
 ```ts
 import Stripe from 'stripe'
@@ -412,9 +412,9 @@ export function verifyWebhookSignature(payload: string, signature: string): Stri
 }
 ```
 
-- [ ] **Step 4: 实现 `checkout/route.ts`**：登录 → body `{ packageId }` → `createCheckoutSession` → `{ url }`；异常返回 400/500
+- [x] **Step 4: 实现 `checkout/route.ts`**：登录 → body `{ packageId }` → `createCheckoutSession` → `{ url }`；异常返回 400/500
 
-- [ ] **Step 5: 实现 `webhooks/stripe/route.ts`**
+- [x] **Step 5: 实现 `webhooks/stripe/route.ts`**
 
 ```ts
 export async function POST(req: Request) {
@@ -435,11 +435,11 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 6: 跑测试**：`npx vitest run src/lib/payments` → PASS
+- [x] **Step 6: 跑测试**：`npx vitest run src/lib/payments` → PASS
 
-- [ ] **Step 7: 本地联调（可选，需用户 Stripe 测试密钥）**：`.env.local` 加 `STRIPE_SECRET_KEY=sk_test_...`、`STRIPE_WEBHOOK_SECRET=whsec_...`；`stripe listen --forward-to localhost:3000/api/webhooks/stripe`；用 4242 4242 4242 4242 测试卡支付验证入账
+- [x] **Step 7: 本地联调（可选，需用户 Stripe 测试密钥）**：`.env.local` 加 `STRIPE_SECRET_KEY=sk_test_...`、`STRIPE_WEBHOOK_SECRET=whsec_...`；`stripe listen --forward-to localhost:3000/api/webhooks/stripe`；用 4242 4242 4242 4242 测试卡支付验证入账
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git commit -am "feat(payments): stripe checkout and verified webhook with idempotent credit"
@@ -457,19 +457,19 @@ git commit -am "feat(payments): stripe checkout and verified webhook with idempo
 - Create: `src/app/credits/__tests__/credits.test.tsx`
 - Modify: `src/app/library/page.tsx`（余额 + 购买入口 + 消费记录入口）
 
-- [ ] **Step 1: 写失败测试 `PackageCards.test.tsx`**（mock fetch 返回套餐，断言价格/积分展示、点击调用 checkout）
+- [x] **Step 1: 写失败测试 `PackageCards.test.tsx`**（mock fetch 返回套餐，断言价格/积分展示、点击调用 checkout）
 
-- [ ] **Step 2: 实现 `PackageCards.tsx` + `/pricing` 页面**：三档卡片（$ 价格、积分、约可朗读字数、购买按钮）→ `POST /api/credits/checkout` → `window.location.href = url`；未登录显示引导登录；已登录显示当前余额与配额
+- [x] **Step 2: 实现 `PackageCards.tsx` + `/pricing` 页面**：三档卡片（$ 价格、积分、约可朗读字数、购买按钮）→ `POST /api/credits/checkout` → `window.location.href = url`；未登录显示引导登录；已登录显示当前余额与配额
 
-- [ ] **Step 3: 写失败测试 `credits.test.tsx`**（mock balance + transactions，断言余额、流水列表、加载更多）
+- [x] **Step 3: 写失败测试 `credits.test.tsx`**（mock balance + transactions，断言余额、流水列表、加载更多）
 
-- [ ] **Step 4: 实现 `/credits` 页面**：余额卡片 + 流水列表（时间 / 说明 / +-积分）+ 加载更多（游标）+ 回到 /pricing 购买入口
+- [x] **Step 4: 实现 `/credits` 页面**：余额卡片 + 流水列表（时间 / 说明 / +-积分）+ 加载更多（游标）+ 回到 /pricing 购买入口
 
-- [ ] **Step 5: 修改 `/library`**：顶部显示 `积分 {balance}`、`购买积分 →`、`消费记录 →` 链接（已登录时）
+- [x] **Step 5: 修改 `/library`**：顶部显示 `积分 {balance}`、`购买积分 →`、`消费记录 →` 链接（已登录时）
 
-- [ ] **Step 6: 跑测试**：`npx vitest run src/app/pricing src/app/credits src/app/library src/components/pricing` → PASS
+- [x] **Step 6: 跑测试**：`npx vitest run src/app/pricing src/app/credits src/app/library src/components/pricing` → PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git commit -am "feat(credits): pricing and credits history pages with balance entry"
@@ -487,23 +487,23 @@ git commit -am "feat(credits): pricing and credits history pages with balance en
 - Test: `src/lib/tts/__tests__/queue.test.ts`（追加用例）
 - Test: `src/components/reader/__tests__/SettingsPanel.test.tsx`（新建或并入现有测试）
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 readerStore：`sentencePause` 开关与 `sentencePauseSeconds`（默认 2）存在；`setSentencePause(true)` 后 `getOptions()` 返回包含 `sentencePause: true, sentencePauseSeconds: 2`；`setSentencePauseSeconds(5)` 后更新为 5
 
 queue：构造 fake engine，`sentencePause: true, sentencePauseSeconds: 0.05`（测试用短时长）时，句子播完进入「暂停计时」状态，计时结束自动播放下一句（fake timers 断言调用顺序）
 
-- [ ] **Step 2: 实现 readerStore**：`settings.sentencePause: boolean`（默认 false）+ `settings.sentencePauseSeconds: number`（默认 2）+ `setSentencePause` + `setSentencePauseSeconds`
+- [x] **Step 2: 实现 readerStore**：`settings.sentencePause: boolean`（默认 false）+ `settings.sentencePauseSeconds: number`（默认 2）+ `setSentencePause` + `setSentencePauseSeconds`
 
-- [ ] **Step 3: 实现 queue 逐句暂停**：engine `onend` 回调里，若开启 `sentencePause`，先进入 paused 状态并记录计时器，`sentencePauseSeconds` 秒后若用户未手动暂停则自动播下一句；用户手动暂停/停止时清除计时器
+- [x] **Step 3: 实现 queue 逐句暂停**：engine `onend` 回调里，若开启 `sentencePause`，先进入 paused 状态并记录计时器，`sentencePauseSeconds` 秒后若用户未手动暂停则自动播下一句；用户手动暂停/停止时清除计时器
 
-- [ ] **Step 3.5: 边界**：暂停计时期间用户手动暂停 → 取消自动继续，保持手动暂停；计时期间用户手动恢复播放 → 立即继续并取消计时器
+- [x] **Step 3.5: 边界**：暂停计时期间用户手动暂停 → 取消自动继续，保持手动暂停；计时期间用户手动恢复播放 → 立即继续并取消计时器
 
-- [ ] **Step 4: 实现 SettingsPanel**：逐句模式开关 + 时长选择（1–10 秒，默认 2，如 1/2/3/5/8/10 或滑块）；未购买（`purchased === false`）时显示 🔒 锁定态 + 「购买解锁」链接到 `/pricing`；获取购买状态：页面初始化拉一次 `/api/credits/balance`
+- [x] **Step 4: 实现 SettingsPanel**：逐句模式开关 + 时长选择（1–10 秒，默认 2，如 1/2/3/5/8/10 或滑块）；未购买（`purchased === false`）时显示 🔒 锁定态 + 「购买解锁」链接到 `/pricing`；获取购买状态：页面初始化拉一次 `/api/credits/balance`
 
-- [ ] **Step 5: 跑测试**：`npx vitest run src/lib/state src/lib/tts src/components/reader` → PASS
+- [x] **Step 5: 跑测试**：`npx vitest run src/lib/state src/lib/tts src/components/reader` → PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git commit -am "feat(reader): sentence-by-sentence mode gated by purchase"
@@ -516,15 +516,15 @@ git commit -am "feat(reader): sentence-by-sentence mode gated by purchase"
 **Files:**
 - Modify: `docs/DEPLOYMENT.md`（验证清单追加积分/支付步骤）
 
-- [ ] **Step 1: 全量测试 + 类型检查**
+- [x] **Step 1: 全量测试 + 类型检查**
 
 Run: `npm test` 与 `npx tsc --noEmit` → 全绿
 
-- [ ] **Step 2: 推送到 GitHub**（master）→ Vercel 自动部署
+- [x] **Step 2: 推送到 GitHub**（master）→ Vercel 自动部署
 
-- [ ] **Step 3: Vercel 环境变量**：`STRIPE_SECRET_KEY`（测试）、`STRIPE_WEBHOOK_SECRET`（测试）写入 Production/Preview；提醒用户上线前换 `sk_live_...` 与正式 Webhook
+- [x] **Step 3: Vercel 环境变量**：`STRIPE_SECRET_KEY`（测试）、`STRIPE_WEBHOOK_SECRET`（测试）写入 Production/Preview；提醒用户上线前换 `sk_live_...` 与正式 Webhook
 
-- [ ] **Step 4: 线上验证**
+- [x] **Step 4: 线上验证**
 
 1. 新注册账号 → 余额 50
 2. `/pricing` 三档展示正确
@@ -532,7 +532,7 @@ Run: `npm test` 与 `npx tsc --noEmit` → 全绿
 4. 未购买账号进入阅读器 → 逐句模式锁定态
 5. 重复投递 Webhook（`stripe trigger checkout.session.completed`）→ 不重复入账
 
-- [ ] **Step 5: 更新 `docs/DEPLOYMENT.md` 验证清单并提交**
+- [x] **Step 5: 更新 `docs/DEPLOYMENT.md` 验证清单并提交**
 
 ```bash
 git commit -am "docs: add M2b credits and payment verification steps"
