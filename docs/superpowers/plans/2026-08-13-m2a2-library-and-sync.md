@@ -526,7 +526,7 @@ git commit -m "feat(library): add document operations and legacy migration"
 - Create: `src/lib/db/documents.ts`
 - Test: `src/lib/db/__tests__/documents.test.ts`
 
-- [ ] **Step 1: 创建 `db/migrations/005_documents.sql`**
+^- [x] **Step 1: 创建 `db/migrations/005_documents.sql`**
 
 ```sql
 CREATE TABLE IF NOT EXISTS "documents" (
@@ -550,7 +550,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_expiry ON documents ("delete_expires_at
 
 执行 `npm run db:migrate`，预期输出 `applied 005_documents.sql`。
 
-- [ ] **Step 2: 写配额纯函数失败测试 `src/lib/db/__tests__/documents.test.ts`**
+^- [x] **Step 2: 写配额纯函数失败测试 `src/lib/db/__tests__/documents.test.ts`**
 
 ```ts
 import { describe, it, expect } from 'vitest'
@@ -584,12 +584,12 @@ describe('exceedsQuota', () => {
 })
 ```
 
-- [ ] **Step 3: 运行确认失败**
+^- [x] **Step 3: 运行确认失败**
 
 Run: `npx vitest run src/lib/db/__tests__/documents.test.ts`
 Expected: FAIL（`../documents` 不存在）
 
-- [ ] **Step 4: 实现 `src/lib/db/documents.ts`**
+^- [x] **Step 4: 实现 `src/lib/db/documents.ts`**
 
 ```ts
 import { pool } from '@/lib/db/pool'
@@ -695,12 +695,12 @@ export async function hardDeleteServerDocument(userId: string, docId: string): P
 }
 ```
 
-- [ ] **Step 5: 运行确认通过**
+^- [x] **Step 5: 运行确认通过**
 
 Run: `npx vitest run src/lib/db/__tests__/documents.test.ts`
 Expected: 3 个用例 PASS
 
-- [ ] **Step 6: 提交**
+^- [x] **Step 6: 提交**
 
 ```bash
 git add db/migrations/005_documents.sql src/lib/db/documents.ts src/lib/db/__tests__/documents.test.ts
