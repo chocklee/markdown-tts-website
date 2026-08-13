@@ -715,7 +715,7 @@ git commit -m "feat(library): add documents table and server access layer"
 - Create: `src/app/api/documents/route.ts`
 - Create: `src/app/api/documents/[docId]/route.ts`
 
-- [ ] **Step 1: 创建 `src/app/api/documents/route.ts`**
+^- [x] **Step 1: 创建 `src/app/api/documents/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -737,7 +737,7 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/app/api/documents/[docId]/route.ts`**
+^- [x] **Step 2: 创建 `src/app/api/documents/[docId]/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -810,7 +810,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ docI
 }
 ```
 
-- [ ] **Step 3: 手动验收（curl，需已登录 cookie）**
+^- [x] **Step 3: 手动验收（curl，需已登录 cookie）**
 
 1. 运行 `npm run dev`，浏览器登录一个账号
 2. 从浏览器 DevTools 复制 cookie，或先用 Playwright 登录后调用：
@@ -830,7 +830,7 @@ curl http://localhost:3000/api/documents -b <cookie>
 curl -X DELETE http://localhost:3000/api/documents/<uuid> -b <cookie>
 ```
 
-- [ ] **Step 4: 提交**
+^- [x] **Step 4: 提交**
 
 ```bash
 git add src/app/api/documents/route.ts src/app/api/documents/[docId]/route.ts
