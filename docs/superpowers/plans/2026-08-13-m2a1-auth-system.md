@@ -34,7 +34,7 @@
 - Create: `db/migrations/001_auth.sql`
 - Modify: `.gitignore`
 
-- [ ] **Step 1: 安装依赖**
+- [x] **Step 1: 安装依赖**
 
 ```bash
 npm install next-auth@beta @auth/pg-adapter pg resend
@@ -43,7 +43,7 @@ npm install -D @types/pg tsx fake-indexeddb
 
 说明：`next-auth@beta` 即 Auth.js v5；若 beta 标签已下线，改用 `npm install next-auth@5`。装完后 `npx tsc --noEmit` 应无错误（可能需等下一步代码就绪）。
 
-- [ ] **Step 2: 修改 `package.json` scripts**
+- [x] **Step 2: 修改 `package.json` scripts**
 
 ```json
 {
@@ -59,7 +59,7 @@ npm install -D @types/pg tsx fake-indexeddb
 }
 ```
 
-- [ ] **Step 3: 创建 `.env.example`**
+- [x] **Step 3: 创建 `.env.example`**
 
 ```bash
 # 数据库（Neon / Vercel Postgres）
@@ -76,7 +76,7 @@ EMAIL_FROM=听 Markdown <onboarding@resend.dev>
 APP_URL=http://localhost:3000
 ```
 
-- [ ] **Step 4: 创建 `src/lib/config.ts`**
+- [x] **Step 4: 创建 `src/lib/config.ts`**
 
 ```ts
 export const CONFIG = {
@@ -93,7 +93,7 @@ export const CONFIG = {
 } as const
 ```
 
-- [ ] **Step 5: 创建 `src/lib/db/pool.ts`**
+- [x] **Step 5: 创建 `src/lib/db/pool.ts`**
 
 ```ts
 import { Pool } from 'pg'
@@ -107,7 +107,7 @@ export const pool =
 if (process.env.NODE_ENV !== 'production') globalForPg.mttsPool = pool
 ```
 
-- [ ] **Step 6: 创建 `db/migrations/001_auth.sql`**
+- [x] **Step 6: 创建 `db/migrations/001_auth.sql`**
 
 ```sql
 -- Auth.js pg-adapter 标准表 + 自建用户/验证表
@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS "password_resets" (
 
 注：001 已在开发库应用过旧表名，由 002_auth_adapter_fix.sql 修正；新环境按 001+002 顺序执行即可得到正确 schema。
 
-- [ ] **Step 7: 创建 `scripts/migrate.ts`**
+- [x] **Step 7: 创建 `scripts/migrate.ts`**
 
 ```ts
 import { readdir, readFile } from 'node:fs/promises'
@@ -213,11 +213,11 @@ main().catch((err) => {
 })
 ```
 
-- [ ] **Step 8: 确认 `.gitignore` 已忽略 `.env*` 但保留 `.env.example`**
+- [x] **Step 8: 确认 `.gitignore` 已忽略 `.env*` 但保留 `.env.example`**
 
 `.gitignore` 应包含 `.env*.local` 与 `.env`；`!.env.example` 例外的写法按需调整。执行 `npm run db:migrate`，预期输出 `applied 001_auth.sql` + `migrations up to date`（需 `DATABASE_URL` 已配置；连不上数据库则此步失败，先修复连接再继续）。
 
-- [ ] **Step 9: 提交**
+- [x] **Step 9: 提交**
 
 ```bash
 git add package.json package-lock.json .env.example src/lib/config.ts src/lib/db/pool.ts scripts/migrate.ts db/migrations/001_auth.sql .gitignore
@@ -232,7 +232,7 @@ git commit -m "feat(auth): add db pool, migrations, and config"
 - Create: `src/lib/auth/password.ts`
 - Test: `src/lib/auth/__tests__/password.test.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `src/lib/auth/__tests__/password.test.ts`:
 
@@ -309,12 +309,12 @@ describe('hashPassword / verifyPassword', () => {
 })
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `npx vitest run src/lib/auth/__tests__/password.test.ts`
 Expected: FAIL（模块不存在 / 函数未定义）
 
-- [ ] **Step 3: 实现 `src/lib/auth/password.ts`**
+- [x] **Step 3: 实现 `src/lib/auth/password.ts`**
 
 ```ts
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
@@ -357,12 +357,12 @@ export function verifyPassword(password: string, stored: string): boolean {
 }
 ```
 
-- [ ] **Step 4: 运行测试确认通过**
+- [x] **Step 4: 运行测试确认通过**
 
 Run: `npx vitest run src/lib/auth/__tests__/password.test.ts`
 Expected: 4 个用例 PASS
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/lib/auth/password.ts src/lib/auth/__tests__/password.test.ts
@@ -379,7 +379,7 @@ git commit -m "feat(auth): add scrypt password hashing"
 - Create: `src/lib/auth/server.ts`
 - Create: `src/app/api/auth/[...nextauth]/route.ts`
 
-- [ ] **Step 1: 创建类型增强 `src/types/next-auth.d.ts`**
+- [x] **Step 1: 创建类型增强 `src/types/next-auth.d.ts`**
 
 ```ts
 import type { DefaultSession } from 'next-auth'
@@ -397,7 +397,7 @@ declare module 'next-auth/jwt' {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/lib/auth/config.ts`**
+- [x] **Step 2: 创建 `src/lib/auth/config.ts`**
 
 ```ts
 import type { NextAuthConfig } from 'next-auth'
@@ -466,7 +466,7 @@ export const authConfig = {
 } satisfies NextAuthConfig
 ```
 
-- [ ] **Step 3: 创建 `src/lib/auth/server.ts`**
+- [x] **Step 3: 创建 `src/lib/auth/server.ts`**
 
 ```ts
 import NextAuth from 'next-auth'
@@ -480,7 +480,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 })
 ```
 
-- [ ] **Step 4: 创建 `src/app/api/auth/[...nextauth]/route.ts`**
+- [x] **Step 4: 创建 `src/app/api/auth/[...nextauth]/route.ts`**
 
 ```ts
 import { handlers } from '@/lib/auth/server'
@@ -490,12 +490,12 @@ export const runtime = 'nodejs'
 export const { GET, POST } = handlers
 ```
 
-- [ ] **Step 5: 验证类型与构建**
+- [x] **Step 5: 验证类型与构建**
 
 Run: `npx tsc --noEmit && npm run lint`
 Expected: 无错误（若 Auth.js 类型对 Session/JWT 增强报冲突，按增强文件已提供的字段调整，不要弱化类型）
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add src/types/next-auth.d.ts src/lib/auth/config.ts src/lib/auth/server.ts src/app/api/auth/[...nextauth]/route.ts
@@ -511,7 +511,7 @@ git commit -m "feat(auth): add Auth.js v5 instance with credentials and google p
 - Create: `src/lib/security/rateLimit.ts`
 - Test: `src/lib/security/__tests__/rateLimit.test.ts`
 
-- [ ] **Step 1: 写限流失败测试**
+- [x] **Step 1: 写限流失败测试**
 
 `src/lib/security/__tests__/rateLimit.test.ts`:
 
@@ -555,12 +555,12 @@ describe('isRateLimited', () => {
 })
 ```
 
-- [ ] **Step 2: 运行确认失败**
+- [x] **Step 2: 运行确认失败**
 
 Run: `npx vitest run src/lib/security/__tests__/rateLimit.test.ts`
 Expected: FAIL（模块不存在）
 
-- [ ] **Step 3: 实现 `src/lib/security/rateLimit.ts`**
+- [x] **Step 3: 实现 `src/lib/security/rateLimit.ts`**
 
 ```ts
 const buckets = new Map<string, { count: number; resetAt: number }>()
@@ -587,12 +587,12 @@ export function clientIp(req: Request): string {
 }
 ```
 
-- [ ] **Step 4: 运行确认通过**
+- [x] **Step 4: 运行确认通过**
 
 Run: `npx vitest run src/lib/security/__tests__/rateLimit.test.ts`
 Expected: 2 个用例 PASS
 
-- [ ] **Step 5: 实现 `src/lib/email/send.ts`**
+- [x] **Step 5: 实现 `src/lib/email/send.ts`**
 
 ```ts
 import { Resend } from 'resend'
@@ -651,7 +651,7 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
 }
 ```
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add src/lib/email/send.ts src/lib/security/rateLimit.ts src/lib/security/__tests__/rateLimit.test.ts
@@ -666,7 +666,7 @@ git commit -m "feat(auth): add resend email sender and rate limiter"
 - Create: `src/app/api/auth/register/route.ts`
 - Create: `src/app/api/auth/resend-verification/route.ts`
 
-- [ ] **Step 1: 创建 `src/app/api/auth/register/route.ts`**
+- [x] **Step 1: 创建 `src/app/api/auth/register/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -751,7 +751,7 @@ export async function POST(req: Request) {
 
 说明：邮件发送失败不阻塞注册返回（用户可稍后从登录页重发）；已注册邮箱返回 409。
 
-- [ ] **Step 2: 创建 `src/app/api/auth/resend-verification/route.ts`**
+- [x] **Step 2: 创建 `src/app/api/auth/resend-verification/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -807,12 +807,12 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 3: 类型与构建检查**
+- [x] **Step 3: 类型与构建检查**
 
 Run: `npx tsc --noEmit && npm run lint`
 Expected: 无错误
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add src/app/api/auth/register/route.ts src/app/api/auth/resend-verification/route.ts
@@ -826,7 +826,7 @@ git commit -m "feat(auth): add register and resend-verification apis"
 **Files:**
 - Create: `src/app/verify-email/page.tsx`
 
-- [ ] **Step 1: 创建 `src/app/verify-email/page.tsx`**
+- [x] **Step 1: 创建 `src/app/verify-email/page.tsx`**
 
 ```tsx
 import Link from 'next/link'
@@ -892,7 +892,7 @@ export default async function VerifyEmailPage({
 }
 ```
 
-- [ ] **Step 2: 手动验收**
+- [x] **Step 2: 手动验收**
 
 1. 运行 `npm run dev`
 2. 用 curl 注册：`curl -X POST http://localhost:3000/api/auth/register -H 'Content-Type: application/json' -d '{"email":"test@example.com","password":"password123"}'` → `{"ok":true}`
@@ -900,7 +900,7 @@ export default async function VerifyEmailPage({
 4. 浏览器打开 `http://localhost:3000/verify-email?token=<token>` → 显示「邮箱验证成功」
 5. 再次打开同一链接 → 显示「验证链接无效」（一次性）
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 git add src/app/verify-email/page.tsx
@@ -918,7 +918,7 @@ git commit -m "feat(auth): add email verification page"
 - Create: `src/app/login/page.tsx`
 - Create: `src/app/register/page.tsx`（补充任务，见 Step 5）
 
-- [ ] **Step 1: 修改 `src/app/layout.tsx`**
+- [x] **Step 1: 修改 `src/app/layout.tsx`**
 
 ```tsx
 import type { Metadata } from 'next'
@@ -945,7 +945,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-- [ ] **Step 2: 创建 `src/components/layout/Header.tsx`**
+- [x] **Step 2: 创建 `src/components/layout/Header.tsx`**
 
 ```tsx
 'use client'
@@ -985,7 +985,7 @@ export function Header() {
 }
 ```
 
-- [ ] **Step 3: 创建 `src/app/api/auth/providers/route.ts`**
+- [x] **Step 3: 创建 `src/app/api/auth/providers/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -997,7 +997,7 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 4: 创建 `src/app/login/page.tsx`**
+- [x] **Step 4: 创建 `src/app/login/page.tsx`**
 
 ```tsx
 'use client'
@@ -1113,7 +1113,7 @@ export default function LoginPage() {
 }
 ```
 
-- [ ] **Step 5: 创建 `src/app/register/page.tsx`（补充任务：登录页的「注册新账号」指向这里）**
+- [x] **Step 5: 创建 `src/app/register/page.tsx`（补充任务：登录页的「注册新账号」指向这里）**
 
 ```tsx
 'use client'
@@ -1211,7 +1211,7 @@ export default function RegisterPage() {
 }
 ```
 
-- [ ] **Step 6: 手动验收**
+- [x] **Step 6: 手动验收**
 
 1. 用 node 连库手动建一个已验证用户（或复用 Task 6 的验证流程）：
 
@@ -1231,7 +1231,7 @@ const {Pool}=require('pg');const pool=new Pool({connectionString:env.DATABASE_UR
 
 测试数据用完清理，dev server 停止。
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 git add src/app/layout.tsx src/components/layout/Header.tsx src/app/login/page.tsx src/app/api/auth/providers/route.ts src/app/register/page.tsx
