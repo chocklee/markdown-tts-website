@@ -67,8 +67,11 @@ export const authConfig = {
   callbacks: {
     async jwt({ token, user }) {
       if (user?.id) {
+        const changedAt =
+          (user as { passwordChangedAt?: Date | null; password_changed_at?: Date | null }).passwordChangedAt ??
+          (user as { password_changed_at?: Date | null }).password_changed_at
         token.uid = user.id
-        token.pwdChangedAt = user.passwordChangedAt ? new Date(user.passwordChangedAt).getTime() : null
+        token.pwdChangedAt = changedAt ? new Date(changedAt).getTime() : null
         return token
       }
       if (!token.uid) return null
@@ -78,12 +81,10 @@ export const authConfig = {
           [token.uid],
         )
         if (rows.length === 0) return null
-        const dbValue = rows[0].password_changed_at
-        const tokenPwdChangedAt = token.pwdChangedAt
-        if (dbValue && tokenPwdChangedAt !== undefined && new Date(dbValue).getTime() > (tokenPwdChangedAt ?? 0)) {
-          return null
-        }
-        if (dbValue && tokenPwdChangedAt === undefined) token.pwdChangedAt = new Date(dbValue).getTime()
+        const pca = rows[0].password_changed_at
+        if (!pca) return token
+        if (typeof token.pwdChangedAt !== 'number') return null
+        if (new Date(pca).getTime() > token.pwdChangedAt) return null
         return token
       } catch (err) {
         console.error('jwt callback failed', err)
