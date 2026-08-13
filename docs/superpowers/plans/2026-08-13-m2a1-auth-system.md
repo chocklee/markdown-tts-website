@@ -914,7 +914,9 @@ git commit -m "feat(auth): add email verification page"
 **Files:**
 - Modify: `src/app/layout.tsx`
 - Create: `src/components/layout/Header.tsx`
+- Create: `src/app/api/auth/providers/route.ts`
 - Create: `src/app/login/page.tsx`
+- Create: `src/app/register/page.tsx`（补充任务，见 Step 5）
 
 - [ ] **Step 1: 修改 `src/app/layout.tsx`**
 
@@ -1111,18 +1113,129 @@ export default function LoginPage() {
 }
 ```
 
-- [ ] **Step 5: 手动验收**
+- [ ] **Step 5: 创建 `src/app/register/page.tsx`（补充任务：登录页的「注册新账号」指向这里）**
 
-1. 数据库注册一个已验证用户（`psql` 手动 `UPDATE users SET "emailVerified" = now() WHERE email = 'test@example.com'`）
-2. 浏览器访问 `/login`，用该邮箱密码登录 → 跳回首页，Header 显示邮箱与「退出」
-3. 未验证用户登录 → 显示错误提示 + 「重新发送验证邮件」按钮
-4. 未配置 Google 密钥时，登录页不显示 Google 按钮
+```tsx
+'use client'
+import { useState } from 'react'
+import Link from 'next/link'
 
-- [ ] **Step 6: 提交**
+export default function RegisterPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+  const [resendSent, setResendSent] = useState(false)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (res.ok) {
+      setDone(true)
+      return
+    }
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    setError(data.error ?? '注册失败，请重试')
+  }
+
+  async function resend() {
+    const res = await fetch('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    if (res.ok) setResendSent(true)
+  }
+
+  return (
+    <main className="mx-auto max-w-sm px-4 py-16">
+      <h1 className="text-center text-2xl font-bold">注册</h1>
+      {done ? (
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-slate-600">
+            验证邮件已发送到 <span className="font-medium">{email}</span>，请点击邮件中的链接完成验证。
+          </p>
+          <button
+            type="button"
+            onClick={() => void resend()}
+            className="mt-4 w-full rounded-lg border border-slate-300 py-2.5 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            {resendSent ? '已重新发送验证邮件' : '未收到？重新发送'}
+          </button>
+          <Link href="/login" className="mt-3 inline-block text-sm text-blue-600">
+            去登录
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm text-slate-600">
+              邮箱
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-blue-400"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm text-slate-600">
+              密码（至少 8 位）
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-blue-400"
+            />
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button type="submit" className="w-full rounded-lg bg-blue-600 py-2.5 text-white hover:bg-blue-700">
+            注册
+          </button>
+        </form>
+      )}
+    </main>
+  )
+}
+```
+
+- [ ] **Step 6: 手动验收**
+
+1. 用 node 连库手动建一个已验证用户（或复用 Task 6 的验证流程）：
 
 ```bash
-git add src/app/layout.tsx src/components/layout/Header.tsx src/app/login/page.tsx src/app/api/auth/providers/route.ts
-git commit -m "feat(auth): add login page, header, and session provider"
+node -e "
+const fs=require('fs');const env=Object.fromEntries(fs.readFileSync('.env.local','utf8').split('\n').filter(Boolean).map(l=>{const i=l.indexOf('=');return[l.slice(0,i),l.slice(i+1)]}));
+const {Pool}=require('pg');const pool=new Pool({connectionString:env.DATABASE_URL});
+(async()=>{ await pool.query(\`INSERT INTO users (email, password_hash, \"emailVerified\") VALUES ('login-m2a@example.com', 'x', now()) ON CONFLICT (email) DO NOTHING\`); console.log('ok'); await pool.end(); })();
+"
+```
+
+2. 浏览器（dev server 3001）访问 `/login`，用该邮箱 + 任意密码登录（哈希是 'x'，验证邮箱已通过路径会走 scrypt 校验失败 → 显示错误即可确认错误路径；**更完整的正确路径**：先 `/register` 注册一个账号 → 库里把该用户 emailVerified 设为 now() → 再登录 → 应跳回首页，Header 显示邮箱与「退出」）
+3. 未验证用户登录 → 错误提示 + 「重新发送验证邮件」按钮
+4. 未配置 Google 密钥时登录页不显示 Google 按钮
+5. `/register` 页面：注册后显示「验证邮件已发送」状态；重复注册显示 409 错误文案
+6. 刷新页面会话保持（httpOnly Cookie）
+
+测试数据用完清理，dev server 停止。
+
+- [ ] **Step 7: 提交**
+
+```bash
+git add src/app/layout.tsx src/components/layout/Header.tsx src/app/login/page.tsx src/app/api/auth/providers/route.ts src/app/register/page.tsx
+git commit -m "feat(auth): add login and register pages, header, and session provider"
 ```
 
 ---
