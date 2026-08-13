@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
-import { CONFIG } from '@/lib/config'
+import { getProvider } from '@/lib/tts/server/provider'
 
 export const runtime = 'nodejs'
 
 export async function GET() {
-  return NextResponse.json({
-    voices: CONFIG.tts.voices.map((v) => ({ id: v.id, name: v.name })),
-  })
+  try {
+    return NextResponse.json({ voices: getProvider().voices })
+  } catch (err) {
+    console.error('get tts provider failed', err)
+    return NextResponse.json({ error: '语音服务未配置' }, { status: 500 })
+  }
 }

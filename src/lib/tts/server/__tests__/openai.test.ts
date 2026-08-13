@@ -159,4 +159,13 @@ describe('openaiProvider', () => {
     expect(init.signal).toBeInstanceOf(AbortSignal)
     expect(init.signal.aborted).toBe(false)
   })
+
+  it('voices：暴露 4 个稳定 id 与展示名', () => {
+    expect(openaiProvider.voices).toEqual([
+      { id: 'alloy', name: 'Alloy（中性）' },
+      { id: 'nova', name: 'Nova（温暖）' },
+      { id: 'shimmer', name: 'Shimmer（明亮）' },
+      { id: 'echo', name: 'Echo（沉稳）' },
+    ])
+  })
 })

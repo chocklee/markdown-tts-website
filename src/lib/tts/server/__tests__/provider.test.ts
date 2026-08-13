@@ -40,6 +40,26 @@ describe('getProvider', () => {
     expect(getProvider().id).toBe('doubao')
   })
 
+  it('TTS_PROVIDER=doubao 时 getProvider().voices 为豆包列表', () => {
+    vi.stubEnv('TTS_PROVIDER', 'doubao')
+    expect(getProvider().voices).toEqual([
+      { id: 'alloy', name: 'Vivi 2.0（中性）' },
+      { id: 'nova', name: '甜美桃子 2.0（温暖）' },
+      { id: 'shimmer', name: '清新女声 2.0（明亮）' },
+      { id: 'echo', name: '高冷沉稳 2.0（沉稳）' },
+    ])
+  })
+
+  it('无 TTS_PROVIDER（默认 openai）时 getProvider().voices 为 OpenAI 列表', () => {
+    vi.stubEnv('TTS_PROVIDER', undefined)
+    expect(getProvider().voices).toEqual([
+      { id: 'alloy', name: 'Alloy（中性）' },
+      { id: 'nova', name: 'Nova（温暖）' },
+      { id: 'shimmer', name: 'Shimmer（明亮）' },
+      { id: 'echo', name: 'Echo（沉稳）' },
+    ])
+  })
+
   it('openai 供应商暴露 costPerMillionChars = 12', () => {
     expect(openaiProvider.costPerMillionChars).toBe(12)
   })

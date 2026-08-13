@@ -284,4 +284,13 @@ describe('doubaoProvider', () => {
       doubaoProvider.synthesize({ text: 'x', voice: 'alloy', rate: 1 }),
     ).rejects.toThrow('合成失败')
   })
+
+  it('voices：4 个豆包展示名，id 与 VOICE_MAP key 一致', () => {
+    expect(doubaoProvider.voices).toEqual([
+      { id: 'alloy', name: 'Vivi 2.0（中性）' },
+      { id: 'nova', name: '甜美桃子 2.0（温暖）' },
+      { id: 'shimmer', name: '清新女声 2.0（明亮）' },
+      { id: 'echo', name: '高冷沉稳 2.0（沉稳）' },
+    ])
+  })
 })

@@ -32,14 +32,6 @@ export async function POST(req: Request) {
   if (typeof text !== 'string' || countChars(text) <= 0 || Array.from(text).length > CONFIG.tts.maxTextChars) {
     return NextResponse.json({ error: '文本不能为空或过长' }, { status: 400 })
   }
-  const voice = body.voice
-  if (typeof voice !== 'string' || !CONFIG.tts.voices.some((v) => v.id === voice)) {
-    return NextResponse.json({ error: '音色不存在' }, { status: 400 })
-  }
-  const rate = body.rate
-  if (typeof rate !== 'number' || !isValidRate(rate)) {
-    return NextResponse.json({ error: '语速无效' }, { status: 400 })
-  }
 
   let provider: TtsProvider
   try {
@@ -47,6 +39,15 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error('get tts provider failed', err)
     return NextResponse.json({ error: '语音服务未配置' }, { status: 500 })
+  }
+
+  const voice = body.voice
+  if (typeof voice !== 'string' || !provider.voices.some((v) => v.id === voice)) {
+    return NextResponse.json({ error: '音色不存在' }, { status: 400 })
+  }
+  const rate = body.rate
+  if (typeof rate !== 'number' || !isValidRate(rate)) {
+    return NextResponse.json({ error: '语速无效' }, { status: 400 })
   }
 
   const textHashKey = textHash(provider.id, voice, text, rate)

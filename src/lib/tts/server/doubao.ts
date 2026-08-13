@@ -14,6 +14,13 @@ const VOICE_MAP: Record<string, string> = {
   echo: 'zh_male_gaolengchenwen_uranus_bigtts',
 }
 
+const VOICES: TtsProvider['voices'] = [
+  { id: 'alloy', name: 'Vivi 2.0（中性）' },
+  { id: 'nova', name: '甜美桃子 2.0（温暖）' },
+  { id: 'shimmer', name: '清新女声 2.0（明亮）' },
+  { id: 'echo', name: '高冷沉稳 2.0（沉稳）' },
+]
+
 function toSpeechRate(rate: number): number {
   return Math.min(100, Math.max(-50, Math.round((rate - 1) * 100)))
 }
@@ -22,6 +29,7 @@ export const doubaoProvider: TtsProvider = {
   id: 'doubao',
   // 豆包语音合成大模型2.0 后付费约 2.8 元/万字符 ≈ 280 元/百万字符，按汇率 7.2 折算 ≈ $38.9/百万字符
   costPerMillionChars: 38.9,
+  voices: VOICES,
 
   async synthesize({ text, voice, rate }) {
     const apiKey = process.env.DOUBAO_API_KEY

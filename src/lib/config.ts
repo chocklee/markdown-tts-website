@@ -22,12 +22,6 @@ export const CONFIG = {
     creditsPer100Chars: 3,
     maxTextChars: 2000,
     cacheTtlDays: 30,
-    voices: [
-      { id: 'alloy', name: 'Alloy（中性）' },
-      { id: 'nova', name: 'Nova（温暖）' },
-      { id: 'shimmer', name: 'Shimmer（明亮）' },
-      { id: 'echo', name: 'Echo（沉稳）' },
-    ],
   },
   recycle: {
     retentionDays: 30,

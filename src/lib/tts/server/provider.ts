@@ -5,6 +5,7 @@ import { openaiProvider } from './openai'
 export interface TtsProvider {
   readonly id: string
   readonly costPerMillionChars: number
+  readonly voices: { id: string; name: string }[]
   synthesize(input: {
     text: string
     voice: string
