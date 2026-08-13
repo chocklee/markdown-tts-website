@@ -845,7 +845,7 @@ git commit -m "feat(library): add documents api routes"
 - Create: `src/lib/sync/engine.ts`
 - Test: `src/lib/sync/__tests__/engine.test.ts`
 
-- [ ] **Step 1: 写失败测试 `src/lib/sync/__tests__/engine.test.ts`**
+^- [x] **Step 1: 写失败测试 `src/lib/sync/__tests__/engine.test.ts`**
 
 ```ts
 import { describe, it, expect } from 'vitest'
@@ -924,12 +924,12 @@ describe('computeSyncPlan', () => {
 })
 ```
 
-- [ ] **Step 2: 运行确认失败**
+^- [x] **Step 2: 运行确认失败**
 
 Run: `npx vitest run src/lib/sync/__tests__/engine.test.ts`
 Expected: FAIL（`../engine` 不存在）
 
-- [ ] **Step 3: 实现 `src/lib/sync/engine.ts`**
+^- [x] **Step 3: 实现 `src/lib/sync/engine.ts`**
 
 ```ts
 import type { LibraryDocument, SyncedDocument } from '@/types/document'
@@ -969,12 +969,12 @@ export function computeSyncPlan(local: LibraryDocument[], remote: SyncedDocument
 }
 ```
 
-- [ ] **Step 4: 运行确认通过**
+^- [x] **Step 4: 运行确认通过**
 
 Run: `npx vitest run src/lib/sync/__tests__/engine.test.ts`
 Expected: 7 个用例 PASS
 
-- [ ] **Step 5: 提交**
+^- [x] **Step 5: 提交**
 
 ```bash
 git add src/lib/sync/engine.ts src/lib/sync/__tests__/engine.test.ts
