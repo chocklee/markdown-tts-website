@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
+import { signIn, getProviders } from 'next-auth/react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -14,8 +14,7 @@ export default function LoginPage() {
   const [hasGoogle, setHasGoogle] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth/providers', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
+    getProviders()
       .then((data) => setHasGoogle(Boolean(data?.google)))
       .catch(() => {})
   }, [])
