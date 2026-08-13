@@ -57,7 +57,7 @@ export default function RegisterPage() {
             type="button"
             onClick={() => void resend()}
             disabled={resendSent}
-            className="mt-4 w-full rounded-lg border border-slate-300 py-2.5 text-sm text-slate-600 hover:bg-slate-100"
+            className="mt-4 w-full rounded-lg border border-slate-300 py-2.5 text-sm text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {resendSent ? '已重新发送验证邮件' : '未收到？重新发送'}
           </button>
