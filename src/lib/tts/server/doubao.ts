@@ -62,12 +62,10 @@ export const doubaoProvider: TtsProvider = {
     if (!res.ok) {
       let message = `豆包语音合成失败: HTTP ${res.status}`
       try {
-        const body = JSON.parse(raw) as { header?: { code?: number; message?: string } }
-        if (body.header?.message) {
-          message = body.header.message
-        }
+        const body = JSON.parse(raw) as { header?: { message?: string }; message?: string }
+        message = body.header?.message ?? body.message ?? message
       } catch {
-        // 忽略非 JSON 错误响应体
+        // 非 JSON 错误响应体，保留回退消息
       }
       throw new Error(message)
     }
@@ -75,9 +73,18 @@ export const doubaoProvider: TtsProvider = {
     const chunks: Buffer[] = []
     for (const line of raw.split('\n')) {
       if (!line.trim()) continue
-      const parsed = JSON.parse(line) as { code?: number; data?: unknown; message?: string }
+      let parsed: { code?: number; data?: unknown; message?: string }
+      try {
+        parsed = JSON.parse(line)
+      } catch {
+        throw new Error('合成响应解析失败')
+      }
       if (parsed.code === SUCCESS_CODE && typeof parsed.data === 'string' && parsed.data.length > 0) {
-        chunks.push(Buffer.from(parsed.data, 'base64'))
+        const audio = Buffer.from(parsed.data, 'base64')
+        if (audio.length === 0) {
+          throw new Error('合成数据解码失败')
+        }
+        chunks.push(audio)
       } else if (parsed.code === END_CODE) {
         break
       } else if (typeof parsed.code === 'number' && parsed.code > 0) {
@@ -86,12 +93,13 @@ export const doubaoProvider: TtsProvider = {
       }
     }
 
-    if (chunks.length === 0) {
+    const audio = Buffer.concat(chunks)
+    if (audio.length === 0) {
       throw new Error('合成失败')
     }
 
     return {
-      audio: Buffer.concat(chunks),
+      audio,
       contentType: 'audio/mpeg',
       costUsd: estimateCostUsd(countChars(text), doubaoProvider.costPerMillionChars),
     }

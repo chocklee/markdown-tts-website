@@ -196,4 +196,92 @@ describe('doubaoProvider', () => {
     const result = await doubaoProvider.synthesize({ text: ' 你好世界\n', voice: 'alloy', rate: 1 })
     expect(result.costUsd).toBe(0.000156)
   })
+
+  it('data 为非法 base64 抛「合成数据解码失败」', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonlResponse([
+        { code: 0, data: '!!!!' },
+        { code: 20000000 },
+      ]),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('DOUBAO_API_KEY', 'key-test-123')
+
+    await expect(
+      doubaoProvider.synthesize({ text: 'x', voice: 'alloy', rate: 1 }),
+    ).rejects.toThrow('合成数据解码失败')
+  })
+
+  it('空响应体（0 字节）抛「合成失败」', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('DOUBAO_API_KEY', 'key-test-123')
+
+    await expect(
+      doubaoProvider.synthesize({ text: 'x', voice: 'alloy', rate: 1 }),
+    ).rejects.toThrow('合成失败')
+  })
+
+  it('畸形 JSON 行抛「合成响应解析失败」', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('not-json\n{"code":20000000}', { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('DOUBAO_API_KEY', 'key-test-123')
+
+    await expect(
+      doubaoProvider.synthesize({ text: 'x', voice: 'alloy', rate: 1 }),
+    ).rejects.toThrow('合成响应解析失败')
+  })
+
+  it('非 2xx 响应无 header.message 时回落顶层 message', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: 401, message: '顶层错误' }), { status: 401 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('DOUBAO_API_KEY', 'key-test-123')
+
+    await expect(
+      doubaoProvider.synthesize({ text: 'x', voice: 'alloy', rate: 1 }),
+    ).rejects.toThrow('顶层错误')
+  })
+
+  it('非 2xx 非 JSON 错误体回退「豆包语音合成失败: HTTP <status>」', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('<html>error</html>', { status: 500 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('DOUBAO_API_KEY', 'key-test-123')
+
+    await expect(
+      doubaoProvider.synthesize({ text: 'x', voice: 'alloy', rate: 1 }),
+    ).rejects.toThrow('豆包语音合成失败: HTTP 500')
+  })
+
+  it('请求携带 AbortSignal 超时信号', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('DOUBAO_API_KEY', 'key-test-123')
+
+    await doubaoProvider.synthesize({ text: 'x', voice: 'alloy', rate: 1 })
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init.signal).toBeInstanceOf(AbortSignal)
+    expect(init.signal.aborted).toBe(false)
+  })
+
+  it('结束码先行时忽略后续行（无音频则抛「合成失败」）', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonlResponse([
+        { code: 20000000 },
+        { code: 0, data: Buffer.from('abc').toString('base64') },
+      ]),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('DOUBAO_API_KEY', 'key-test-123')
+
+    await expect(
+      doubaoProvider.synthesize({ text: 'x', voice: 'alloy', rate: 1 }),
+    ).rejects.toThrow('合成失败')
+  })
 })

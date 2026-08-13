@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { getProvider } from '../provider'
 import { openaiProvider } from '../openai'
+import { doubaoProvider } from '../doubao'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -31,6 +32,12 @@ describe('getProvider', () => {
   it('TTS_PROVIDER 为空白串时回退到 CONFIG 默认（openai）', () => {
     vi.stubEnv('TTS_PROVIDER', '   ')
     expect(getProvider().id).toBe('openai')
+  })
+
+  it('TTS_PROVIDER=doubao 时返回 doubao 供应商', () => {
+    vi.stubEnv('TTS_PROVIDER', 'doubao')
+    expect(getProvider()).toBe(doubaoProvider)
+    expect(getProvider().id).toBe('doubao')
   })
 
   it('openai 供应商暴露 costPerMillionChars = 12', () => {
