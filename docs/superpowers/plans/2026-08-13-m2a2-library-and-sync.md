@@ -1708,7 +1708,11 @@ onClick={() => void signIn('google', { callbackUrl: '/library' })}
 Run: `npm run test && npx tsc --noEmit && npm run lint && npm run build`
 Expected: 全部通过
 
-- [ ] **Step 3: 端到端验收（Playwright / 手动）**
+- [x] **Step 3: 端到端验收（Playwright / 手动）**
+
+> 已完成（真实浏览器 + Neon DB 双设备上下文）：19/19 检查通过，覆盖未登录保存/登录提示、登录后自动同步上传、跨设备拉取（docId 一致）、重命名传播、删除/恢复/彻底删除两端同步、超配额拦截提示（413 文案）、回收站过期惰性清理（本地无复活）。E2E 发现并修复两个缺陷：
+> 1. M2a-1 遗留：自定义 `src/app/api/auth/providers/route.ts` 遮蔽 Auth.js 内置端点，导致 UI 凭据登录永远跳转 `/signin` → 删除自定义路由、登录页改用 `getProviders()`（`fix(auth): restore next-auth providers endpoint so credentials login works`）。
+> 2. 同步引擎对「本地已删除、云端缺失」的文档会重新上传（彻底删除/过期清理后文档复活）→ `SyncPlan` 新增 `removals` 通道，本地已删除且云端缺失的文档改为本地移除（`fix(sync): purge deleted docs locally instead of re-uploading them`）。
 
 1. 未登录：粘贴内容 → 朗读 → `/library` 显示本机文档 + 登录提示
 2. 登录后：`/library` 自动同步，本机文档上传到云端（数据库 `documents` 表可见）
