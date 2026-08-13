@@ -1248,7 +1248,7 @@ git commit -m "feat(auth): add login and register pages, header, and session pro
 - Create: `src/app/forgot-password/page.tsx`
 - Create: `src/app/reset-password/page.tsx`
 
-- [ ] **Step 1: 创建 `src/app/api/auth/forgot-password/route.ts`**
+^- [x] **Step 1: 创建 `src/app/api/auth/forgot-password/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -1293,7 +1293,7 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/app/api/auth/reset-password/route.ts`**
+^- [x] **Step 2: 创建 `src/app/api/auth/reset-password/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -1354,7 +1354,7 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 3: 创建 `src/app/forgot-password/page.tsx`**
+^- [x] **Step 3: 创建 `src/app/forgot-password/page.tsx`**
 
 ```tsx
 'use client'
@@ -1412,7 +1412,7 @@ export default function ForgotPasswordPage() {
 }
 ```
 
-- [ ] **Step 4: 创建 `src/app/reset-password/page.tsx`（完整文件，含 Suspense 边界）**
+^- [x] **Step 4: 创建 `src/app/reset-password/page.tsx`（完整文件，含 Suspense 边界）**
 
 ```tsx
 'use client'
@@ -1498,13 +1498,13 @@ export default function ResetPasswordPageWrapper() {
 
 说明：`useSearchParams` 在 Next 15 构建时需要 Suspense 边界，所以页面主体是内部组件 `ResetPasswordPage`，默认导出 `ResetPasswordPageWrapper` 负责包 `Suspense`。
 
-- [ ] **Step 5: 手动验收**
+^- [x] **Step 5: 手动验收**
 
 1. 已注册用户调 `forgot-password` API → 数据库 `password_resets` 出现 token
 2. 打开 `/reset-password?token=<token>` → 设置新密码 → 用新密码登录成功
 3. 再次使用同一 token → 提示无效（一次性）
 
-- [ ] **Step 6: 提交**
+^- [x] **Step 6: 提交**
 
 ```bash
 git add src/app/api/auth/forgot-password/route.ts src/app/api/auth/reset-password/route.ts src/app/forgot-password/page.tsx src/app/reset-password/page.tsx
