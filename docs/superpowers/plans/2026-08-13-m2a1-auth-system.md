@@ -853,6 +853,7 @@ export default async function VerifyEmailPage({
       if (rows.length === 0) {
         status = 'invalid'
       } else if (new Date(rows[0].expires_at).getTime() < Date.now()) {
+        await client.query('DELETE FROM email_verifications WHERE token = $1', [token])
         status = 'expired'
       } else {
         await client.query('UPDATE users SET "emailVerified" = now() WHERE email = $1', [rows[0].email])
