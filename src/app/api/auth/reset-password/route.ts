@@ -16,8 +16,14 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
   }
-  const token = body.token ?? ''
-  const password = body.password ?? ''
+  if (typeof body !== 'object' || body === null) {
+    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+  }
+  if (typeof body.token !== 'string' || typeof body.password !== 'string') {
+    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+  }
+  const token = body.token
+  const password = body.password
   if (password.length < 8) {
     return NextResponse.json({ error: '密码至少 8 位' }, { status: 400 })
   }
@@ -25,6 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '密码过长' }, { status: 400 })
   }
 
+  const passwordHash = hashPassword(password)
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -41,7 +48,14 @@ export async function POST(req: Request) {
       await client.query('COMMIT')
       return NextResponse.json({ error: '重置链接已过期' }, { status: 400 })
     }
-    await client.query('UPDATE users SET password_hash = $1 WHERE email = $2', [hashPassword(password), rows[0].email])
+    const result = await client.query('UPDATE users SET password_hash = $1 WHERE email = $2', [
+      passwordHash,
+      rows[0].email,
+    ])
+    if (result.rowCount === 0) {
+      await client.query('ROLLBACK')
+      return NextResponse.json({ error: '重置链接无效' }, { status: 400 })
+    }
     await client.query('DELETE FROM password_resets WHERE token = $1', [token])
     await client.query('COMMIT')
   } catch (err) {

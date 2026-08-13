@@ -18,8 +18,12 @@ export default function ForgotPasswordPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      if (res.ok) setSent(true)
-      else setError('发送失败，请稍后再试')
+      if (res.ok) {
+        setSent(true)
+        return
+      }
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      setError(data.error ?? '发送失败，请稍后再试')
     } catch {
       setError('网络错误，请重试')
     } finally {

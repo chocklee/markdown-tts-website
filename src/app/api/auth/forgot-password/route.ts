@@ -18,21 +18,32 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
   }
-  const email = body.email?.trim().toLowerCase() ?? ''
+  if (typeof body !== 'object' || body === null) {
+    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+  }
+  if (typeof body.email !== 'string') {
+    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+  }
+  const email = body.email.trim().toLowerCase()
 
-  const { rows } = await pool.query<{ emailVerified: Date | null }>(
-    'SELECT "emailVerified" FROM users WHERE email = $1',
-    [email],
-  )
-  if (rows[0] && rows[0].emailVerified) {
-    const token = randomBytes(32).toString('hex')
-    const expiresAt = new Date(Date.now() + CONFIG.auth.verificationTtlMs)
-    await pool.query('INSERT INTO password_resets (email, token, expires_at) VALUES ($1, $2, $3)', [
-      email,
-      token,
-      expiresAt,
-    ])
-    await sendPasswordResetEmail(email, token).catch((err) => console.error('send reset email failed', err))
+  try {
+    const { rows } = await pool.query<{ emailVerified: Date | null }>(
+      'SELECT "emailVerified" FROM users WHERE email = $1',
+      [email],
+    )
+    if (rows[0] && rows[0].emailVerified) {
+      const token = randomBytes(32).toString('hex')
+      const expiresAt = new Date(Date.now() + CONFIG.auth.verificationTtlMs)
+      await pool.query('INSERT INTO password_resets (email, token, expires_at) VALUES ($1, $2, $3)', [
+        email,
+        token,
+        expiresAt,
+      ])
+      await sendPasswordResetEmail(email, token).catch((err) => console.error('send reset email failed', err))
+    }
+  } catch (err) {
+    console.error('forgot password failed', err)
+    return NextResponse.json({ error: '操作失败，请稍后再试' }, { status: 500 })
   }
 
   // 无论是否存在都返回成功，避免账号枚举
