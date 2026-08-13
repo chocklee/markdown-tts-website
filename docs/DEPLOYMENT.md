@@ -17,6 +17,8 @@
 | `STRIPE_SECRET_KEY` | 支付上线前 | Stripe 密钥；测试用 `sk_test_...`，上线切 `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | 支付上线前 | Stripe Webhook 签名密钥 `whsec_...`；本地联调用 `stripe listen --forward-to localhost:3000/api/webhooks/stripe` |
 | `OPENAI_API_KEY` | 云语音 | [platform.openai.com](https://platform.openai.com) → API Keys；不配置则阅读器只有浏览器语音，云端音色合成返回错误 |
+| `TTS_PROVIDER` | 可选 | 云端语音供应商，默认 `openai`；切换豆包时填 `doubao` |
+| `DOUBAO_API_KEY` | 豆包语音 | 火山引擎语音技术控制台 → API Key 管理 创建（`X-Api-Key`，非方舟 `ark-` 密钥）；配合 `TTS_PROVIDER=doubao` 使用 |
 
 本地开发时把同样的变量填到 `.env.local`（已被 `.gitignore` 忽略，不会提交）。
 
