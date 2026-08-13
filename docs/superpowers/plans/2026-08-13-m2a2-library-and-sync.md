@@ -1722,7 +1722,7 @@ Expected: 全部通过
 6. 超配额测试：临时把 `users.storage_quota_bytes` 改小（如 100）→ 上传大文档被拦截并提示
 7. 回收站过期清理：临时把 `delete_expires_at` 改成过去时间 → 打开 `/library` 或调 cron 后云端该文档被清除
 
-- [ ] **Step 4: 推送**
+- [x] **Step 4: 推送**
 
 ```bash
 git push origin master
