@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { countChars, calcCredits, textHash, isValidRate } from '../cost'
+import { countChars, calcCredits, textHash, isValidRate, estimateCostUsd } from '../cost'
 
 describe('countChars', () => {
   it('统计 Unicode 码点数（中文按字）', () => {
@@ -58,5 +58,20 @@ describe('isValidRate', () => {
     expect(isValidRate(2)).toBe(true)
     expect(isValidRate(0.1)).toBe(false)
     expect(isValidRate(3)).toBe(false)
+  })
+})
+
+describe('estimateCostUsd', () => {
+  it('100 字按 $12/100万字符估算为 0.0012', () => {
+    expect(estimateCostUsd(100, 12)).toBe(0.0012)
+  })
+
+  it('1 字保留 6 位小数', () => {
+    expect(estimateCostUsd(1, 12)).toBe(0.000012)
+  })
+
+  it('0 字或 0 单价估算为 0', () => {
+    expect(estimateCostUsd(0, 12)).toBe(0)
+    expect(estimateCostUsd(100, 0)).toBe(0)
   })
 })

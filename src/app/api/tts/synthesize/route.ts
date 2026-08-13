@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/server'
 import { CONFIG } from '@/lib/config'
 import { isRateLimited } from '@/lib/security/rateLimit'
-import { calcCredits, countChars, isValidRate, textHash } from '@/lib/tts/server/cost'
+import { calcCredits, countChars, estimateCostUsd, isValidRate, textHash } from '@/lib/tts/server/cost'
 import { getProvider, type TtsProvider } from '@/lib/tts/server/provider'
 import { cleanupExpiredCache, getCachedAudio, upsertCachedAudio } from '@/lib/db/tts'
 import { deductCredits, refundCredits } from '@/lib/db/credits'
@@ -63,7 +63,12 @@ export async function POST(req: Request) {
   }
 
   const credits = calcCredits(chars, CONFIG.tts.creditsPer100Chars)
-  const meta = { provider: provider.id, voice, chars, costUsd: 0 }
+  const meta = {
+    provider: provider.id,
+    voice,
+    chars,
+    costUsd: estimateCostUsd(chars, provider.costPerMillionChars),
+  }
   const deducted = await deductCredits(session.user.id, credits, textHashKey, meta, '云端朗读')
   if (!deducted) {
     return NextResponse.json({ error: '积分不足，请购买积分' }, { status: 402 })

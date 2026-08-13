@@ -1,10 +1,8 @@
 import type { TtsProvider } from './provider'
-import { countChars } from './cost'
+import { countChars, estimateCostUsd } from './cost'
 
 const SPEECH_URL = 'https://api.openai.com/v1/audio/speech'
 const MODEL = 'gpt-4o-mini-tts'
-// gpt-4o-mini-tts $12/100万字符
-const COST_PER_MILLION_CHARS_USD = 12
 
 function clampSpeed(rate: number): number {
   return Math.min(4, Math.max(0.25, rate))
@@ -12,6 +10,8 @@ function clampSpeed(rate: number): number {
 
 export const openaiProvider: TtsProvider = {
   id: 'openai',
+  // gpt-4o-mini-tts $12/100万字符
+  costPerMillionChars: 12,
 
   async synthesize({ text, voice, rate }) {
     const apiKey = process.env.OPENAI_API_KEY
@@ -40,7 +40,7 @@ export const openaiProvider: TtsProvider = {
 
     const audio = Buffer.from(await res.arrayBuffer())
     const contentType = res.headers.get('content-type') ?? 'audio/mpeg'
-    const costUsd = Math.round((countChars(text) * COST_PER_MILLION_CHARS_USD) / 1_000_000 * 1e6) / 1e6
+    const costUsd = estimateCostUsd(countChars(text), openaiProvider.costPerMillionChars)
 
     return { audio, contentType, costUsd }
   },

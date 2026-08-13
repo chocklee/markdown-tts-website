@@ -14,6 +14,11 @@ export function calcCredits(chars: number, creditsPer100Chars: number): number {
   return Math.max(1, Math.ceil((chars * creditsPer100Chars) / 100))
 }
 
+export function estimateCostUsd(chars: number, costPerMillionChars: number): number {
+  if (chars <= 0 || costPerMillionChars <= 0) return 0
+  return Math.round((chars * costPerMillionChars) / 1_000_000 * 1e6) / 1e6
+}
+
 export function textHash(provider: string, voice: string, text: string): string {
   return createHash('sha256').update(`${provider}|${voice}|${text}`).digest('hex')
 }

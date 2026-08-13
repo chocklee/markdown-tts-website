@@ -3,6 +3,7 @@ import { openaiProvider } from './openai'
 
 export interface TtsProvider {
   readonly id: string
+  readonly costPerMillionChars: number
   synthesize(input: {
     text: string
     voice: string

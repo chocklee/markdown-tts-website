@@ -32,4 +32,8 @@ describe('getProvider', () => {
     vi.stubEnv('TTS_PROVIDER', '   ')
     expect(getProvider().id).toBe('openai')
   })
+
+  it('openai 供应商暴露 costPerMillionChars = 12', () => {
+    expect(openaiProvider.costPerMillionChars).toBe(12)
+  })
 })
