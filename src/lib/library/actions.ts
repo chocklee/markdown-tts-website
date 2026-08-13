@@ -93,10 +93,20 @@ export async function removeDocumentLocally(docId: string): Promise<void> {
   await deleteDocument(docId)
 }
 
-export async function migrateLegacyDocument(): Promise<LibraryDocument | null> {
+let legacyMigrationPromise: Promise<LibraryDocument | null> | null = null
+
+export function migrateLegacyDocument(): Promise<LibraryDocument | null> {
+  if (!legacyMigrationPromise) {
+    legacyMigrationPromise = doMigrateLegacyDocument().finally(() => {
+      legacyMigrationPromise = null
+    })
+  }
+  return legacyMigrationPromise
+}
+
+async function doMigrateLegacyDocument(): Promise<LibraryDocument | null> {
   const legacy = loadLegacyDocument()
   if (!legacy) return null
-  if (await getDocument(legacy.id)) return null
   const doc = createLibraryDocument({ title: legacy.title, content: legacy.content })
   await putDocument(doc)
   clearLegacyDocument()

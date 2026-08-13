@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { listDocuments, deleteDocument } from '@/lib/storage/library'
+import { saveDocumentToLibrary } from '@/lib/library/actions'
+import type { LibraryDocument } from '@/types/document'
 
 const pushMock = vi.fn()
 
@@ -10,11 +12,21 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn() }),
 }))
 
+vi.mock('@/lib/sync/schedule', () => ({
+  scheduleSync: vi.fn(),
+}))
+
+vi.mock('@/lib/library/actions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/library/actions')>()
+  return { ...actual, saveDocumentToLibrary: vi.fn(actual.saveDocumentToLibrary) }
+})
+
 import InputSection from '../InputSection'
 
 describe('InputSection', () => {
   beforeEach(async () => {
     pushMock.mockClear()
+    vi.mocked(saveDocumentToLibrary).mockClear()
     localStorage.clear()
     for (const doc of await listDocuments()) {
       await deleteDocument(doc.docId)
@@ -55,6 +67,16 @@ describe('InputSection', () => {
     expect(screen.getByText('文件超过 5MB 上限')).toBeInTheDocument()
   })
 
+  it('粘贴多字节内容超过 5MB 字节（但不足 5MB 字符数）时提示错误且不跳转', async () => {
+    const user = userEvent.setup()
+    render(<InputSection />)
+    const textarea = screen.getByLabelText('Markdown 内容')
+    fireEvent.change(textarea, { target: { value: '你'.repeat(2 * 1024 * 1024) } })
+    await user.click(screen.getByRole('button', { name: '开始收听' }))
+    expect(screen.getByText('内容超过 5MB 上限')).toBeInTheDocument()
+    expect(pushMock).not.toHaveBeenCalled()
+  })
+
   it('选择合法文件后读取内容并保存到文件库', async () => {
     const user = userEvent.setup()
     render(<InputSection />)
@@ -70,6 +92,34 @@ describe('InputSection', () => {
     const docs = await listDocuments()
     expect(docs).toHaveLength(1)
     expect(docs[0].title).toBe('文件标题')
+  })
+
+  it('保存中按钮显示保存中…且禁用，避免重复保存', async () => {
+    let resolveSave!: (doc: LibraryDocument) => void
+    vi.mocked(saveDocumentToLibrary).mockImplementationOnce(
+      () => new Promise<LibraryDocument>((resolve) => {
+        resolveSave = resolve
+      })
+    )
+    const user = userEvent.setup()
+    render(<InputSection />)
+    await user.type(screen.getByLabelText('Markdown 内容'), '内容')
+    await user.click(screen.getByRole('button', { name: '开始收听' }))
+    const savingButton = screen.getByRole('button', { name: '保存中…' })
+    expect(savingButton).toBeDisabled()
+    resolveSave({
+      docId: 'doc-1',
+      title: '内容',
+      content: '内容',
+      contentHash: 'x',
+      fileSizeBytes: 6,
+      updatedAt: 1,
+      deletedAt: null,
+      deleteExpiresAt: null,
+      dirty: true,
+    })
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/reader?docId=doc-1'))
+    expect(vi.mocked(saveDocumentToLibrary)).toHaveBeenCalledTimes(1)
   })
 
   it('读取文件时开始收听按钮禁用且不跳转', async () => {

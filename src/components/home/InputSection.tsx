@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { parseDocument } from '@/lib/markdown/parse'
 import { saveDocumentToLibrary } from '@/lib/library/actions'
 import { scheduleSync } from '@/lib/sync/schedule'
-import type { LibraryDocument } from '@/types/document'
 
 const MAX_SIZE = 5 * 1024 * 1024
 
@@ -20,6 +19,7 @@ export default function InputSection() {
   const [fileLabel, setFileLabel] = useState('')
   const [error, setError] = useState('')
   const [reading, setReading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const readingFileRef = useRef<File | null>(null)
 
   function handleFile(file: File | undefined) {
@@ -52,6 +52,7 @@ export default function InputSection() {
   }
 
   async function start() {
+    if (saving) return
     if (reading) {
       setError('文件读取中，请稍候')
       return
@@ -65,16 +66,17 @@ export default function InputSection() {
       setError('内容超过 5MB 上限')
       return
     }
-    const doc = parseDocument(content, fileName || '未命名文档')
-    let stored: LibraryDocument
+    setSaving(true)
     try {
-      stored = await saveDocumentToLibrary({ title: doc.title, content })
+      const doc = parseDocument(content, fileName || '未命名文档')
+      const stored = await saveDocumentToLibrary({ title: doc.title, content })
+      scheduleSync()
+      router.push(`/reader?docId=${encodeURIComponent(stored.docId)}`)
     } catch {
-      setError('保存失败，内容过大')
-      return
+      setError('保存失败，请重试')
+    } finally {
+      setSaving(false)
     }
-    scheduleSync()
-    router.push(`/reader?docId=${encodeURIComponent(stored.docId)}`)
   }
 
   return (
@@ -110,10 +112,10 @@ export default function InputSection() {
           <button
             type="button"
             className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            disabled={reading}
+            disabled={saving || reading}
             onClick={() => void start()}
           >
-            开始收听
+            {saving ? '保存中…' : '开始收听'}
           </button>
         </div>
         {fileLabel && <p className="mt-2 text-xs text-slate-400">文件：{fileLabel}</p>}

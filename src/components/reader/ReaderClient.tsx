@@ -20,21 +20,29 @@ export function ReaderClient({ docId }: { docId: string | null }) {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      let found: LibraryDocument | null = null
-      if (docId) found = await getDocument(docId)
-      if (!found) {
-        found = await migrateLegacyDocument()
-        if (found && !cancelled) {
-          router.replace(`/reader?docId=${encodeURIComponent(found.docId)}`)
+      try {
+        let found: LibraryDocument | null = null
+        if (docId) found = await getDocument(docId)
+        if (found?.deletedAt) {
+          if (!cancelled) router.replace('/')
+          return
         }
-      }
-      if (!found) {
+        if (!found) {
+          found = await migrateLegacyDocument()
+          if (found && !cancelled) {
+            router.replace(`/reader?docId=${encodeURIComponent(found.docId)}`)
+          }
+        }
+        if (!found) {
+          if (!cancelled) router.replace('/')
+          return
+        }
+        if (!cancelled) {
+          setStored(found)
+          setDoc(parseDocument(found.content, found.title))
+        }
+      } catch {
         if (!cancelled) router.replace('/')
-        return
-      }
-      if (!cancelled) {
-        setStored(found)
-        setDoc(parseDocument(found.content, found.title))
       }
     }
     void load()
@@ -69,6 +77,7 @@ export function ReaderClient({ docId }: { docId: string | null }) {
 
   useEffect(() => {
     return () => {
+      useReaderStore.setState({ document: null })
       useReaderStore.getState().stop()
     }
   }, [])

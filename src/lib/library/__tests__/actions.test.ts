@@ -101,6 +101,15 @@ describe('文档操作层', () => {
     expect((await listDocuments()).length).toBe(1)
   })
 
+  it('并发迁移只导入一次，两次调用返回同一 docId', async () => {
+    localStorage.setItem('mtts:doc', JSON.stringify({ id: 'legacy-1', title: '旧文', content: '# 旧内容', savedAt: Date.now() }))
+    const [first, second] = await Promise.all([migrateLegacyDocument(), migrateLegacyDocument()])
+    expect(first?.docId).toBeTruthy()
+    expect(second?.docId).toBe(first?.docId)
+    expect((await listDocuments()).length).toBe(1)
+    expect(localStorage.getItem('mtts:doc')).toBeNull()
+  })
+
   it('无遗留文档时迁移返回 null', async () => {
     expect(await migrateLegacyDocument()).toBeNull()
   })
