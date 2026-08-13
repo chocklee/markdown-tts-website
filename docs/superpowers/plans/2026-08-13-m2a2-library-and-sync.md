@@ -522,11 +522,11 @@ git commit -m "feat(library): add document operations and legacy migration"
 ### Task 3: documents 表迁移与服务端存取模块
 
 **Files:**
-- Create: `db/migrations/002_documents.sql`
+- Create: `db/migrations/003_documents.sql`
 - Create: `src/lib/db/documents.ts`
 - Test: `src/lib/db/__tests__/documents.test.ts`
 
-- [ ] **Step 1: 创建 `db/migrations/002_documents.sql`**
+- [ ] **Step 1: 创建 `db/migrations/003_documents.sql`**
 
 ```sql
 CREATE TABLE IF NOT EXISTS "documents" (
@@ -548,7 +548,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_user ON documents ("user_id");
 CREATE INDEX IF NOT EXISTS idx_documents_expiry ON documents ("delete_expires_at") WHERE "delete_expires_at" IS NOT NULL;
 ```
 
-执行 `npm run db:migrate`，预期输出 `applied 002_documents.sql`。
+执行 `npm run db:migrate`，预期输出 `applied 003_documents.sql`。
 
 - [ ] **Step 2: 写配额纯函数失败测试 `src/lib/db/__tests__/documents.test.ts`**
 
@@ -703,7 +703,7 @@ Expected: 3 个用例 PASS
 - [ ] **Step 6: 提交**
 
 ```bash
-git add db/migrations/002_documents.sql src/lib/db/documents.ts src/lib/db/__tests__/documents.test.ts
+git add db/migrations/003_documents.sql src/lib/db/documents.ts src/lib/db/__tests__/documents.test.ts
 git commit -m "feat(library): add documents table and server access layer"
 ```
 

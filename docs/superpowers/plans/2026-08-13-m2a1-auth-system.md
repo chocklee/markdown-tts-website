@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS "users" (
   "updated_at" timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS "account" (
+CREATE TABLE IF NOT EXISTS "accounts" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "userId" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
   "type" text NOT NULL,
@@ -139,14 +139,14 @@ CREATE TABLE IF NOT EXISTS "account" (
   UNIQUE ("provider", "providerAccountId")
 );
 
-CREATE TABLE IF NOT EXISTS "session" (
+CREATE TABLE IF NOT EXISTS "sessions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "sessionToken" text NOT NULL UNIQUE,
   "userId" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
   "expires" timestamptz NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS "verificationToken" (
+CREATE TABLE IF NOT EXISTS "verification_token" (
   "identifier" text NOT NULL,
   "token" text NOT NULL,
   "expires" timestamptz NOT NULL,
@@ -169,6 +169,8 @@ CREATE TABLE IF NOT EXISTS "password_resets" (
   "created_at" timestamptz NOT NULL DEFAULT now()
 );
 ```
+
+注：001 已在开发库应用过旧表名，由 002_auth_adapter_fix.sql 修正；新环境按 001+002 顺序执行即可得到正确 schema。
 
 - [ ] **Step 7: 创建 `scripts/migrate.ts`**
 
