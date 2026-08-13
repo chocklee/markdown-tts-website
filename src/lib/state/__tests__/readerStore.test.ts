@@ -8,12 +8,13 @@ import { defaultSettings } from '@/types/reader'
 
 class FakeEngine implements TtsEngine {
   speakCalls: { text: string; onend: () => void }[] = []
+  cancelCalls = 0
   speak(text: string, opts: { rate: number; volume: number; onend: () => void; onerror: (e: unknown) => void }): void {
     this.speakCalls.push({ text, onend: opts.onend })
   }
   pause(): void {}
   resume(): void {}
-  cancel(): void {}
+  cancel(): void { this.cancelCalls += 1 }
   get isSpeaking(): boolean { return false }
 }
 
@@ -194,16 +195,24 @@ describe('readerStore', () => {
   })
 
   it('setVoice 更新 settings.voice 并重建为 CloudTtsEngine，保持当前句', () => {
-    freshStore()
+    const { engine } = freshStore()
+    const oldQueue = useReaderStore.getState().queue
     expect(useReaderStore.getState().settings.voice).toBe('browser')
     useReaderStore.getState().seekTo('s3')
     useReaderStore.getState().setVoice('nova')
     const state = useReaderStore.getState()
     expect(state.settings.voice).toBe('nova')
     expect(state.engine).toBeInstanceOf(CloudTtsEngine)
-    expect(state.queue).not.toBeNull()
+    expect(state.engine).not.toBe(engine)
+    expect(state.queue).not.toBe(oldQueue)
     expect(state.currentIndex).toBe(2)
     expect(state.isPlaying).toBe(false)
+  })
+
+  it('setVoice 切换时停止旧队列并取消旧引擎', () => {
+    const { engine } = freshStore()
+    useReaderStore.getState().setVoice('nova')
+    expect(engine.cancelCalls).toBe(1)
   })
 
   it('setVoice 切回浏览器音色重建为 BrowserTtsEngine', () => {

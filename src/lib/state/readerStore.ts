@@ -52,6 +52,43 @@ function buildQueue(
   return new SpeechQueue(engine, texts, getOptions, { onIndex, onEnd, onError })
 }
 
+function buildQueueWithCallbacks(engine: TtsEngine, document: ReaderDocument): SpeechQueue {
+  return buildQueue(
+    engine,
+    document,
+    () => ({
+      rate: useReaderStore.getState().settings.rate,
+      volume: useReaderStore.getState().settings.volume,
+      sentencePause: useReaderStore.getState().settings.sentencePause,
+      sentencePauseSeconds: useReaderStore.getState().settings.sentencePauseSeconds,
+    }),
+    (i) => useReaderStore.setState({ currentIndex: i }),
+    () => useReaderStore.setState({ isPlaying: false }),
+    (message) => {
+      console.error(message)
+      useReaderStore.setState({ isPlaying: false })
+    },
+  )
+}
+
+function rebuildQueue(engine: TtsEngine, settingsPatch?: Partial<ReaderSettings>): void {
+  const { document, speakableIds, currentIndex, queue } = useReaderStore.getState()
+  if (!document) return
+  queue?.stop()
+  const currentId = speakableIds[currentIndex]
+  const newIds = getSpeakableIds(document, useReaderStore.getState().settings)
+  const newQueue = buildQueueWithCallbacks(engine, document)
+  const newIndex = currentId ? Math.max(newIds.indexOf(currentId), 0) : 0
+  useReaderStore.setState({
+    engine,
+    queue: newQueue,
+    speakableIds: newIds,
+    currentIndex: newIndex,
+    isPlaying: false,
+    ...(settingsPatch ? { settings: { ...useReaderStore.getState().settings, ...settingsPatch } } : {}),
+  })
+}
+
 export const useReaderStore = create<ReaderState>((set, get) => ({
   document: null,
   settings: { ...defaultSettings },
@@ -66,24 +103,8 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     if (!engineInstance) return
 
     get().queue?.stop()
-    const settings = get().settings
-    const speakableIds = getSpeakableIds(document, settings)
-    const queue = buildQueue(
-      engineInstance,
-      document,
-      () => ({
-        rate: get().settings.rate,
-        volume: get().settings.volume,
-        sentencePause: get().settings.sentencePause,
-        sentencePauseSeconds: get().settings.sentencePauseSeconds,
-      }),
-      (i) => set({ currentIndex: i }),
-      () => set({ isPlaying: false }),
-      (message) => {
-        console.error(message)
-        set({ isPlaying: false })
-      },
-    )
+    const speakableIds = getSpeakableIds(document, get().settings)
+    const queue = buildQueueWithCallbacks(engineInstance, document)
     set({ document, engine: engineInstance, queue, speakableIds, currentIndex: 0, isPlaying: false })
   },
 
@@ -182,33 +203,17 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   setVoice: (voice) => {
     const { settings, document, engine } = get()
     if (voice === settings.voice) return
-    set((s) => ({ settings: { ...s.settings, voice } }))
-    if (!document || !engine) return
-    if (voice === 'browser' && engine instanceof BrowserTtsEngine) return
-    get().queue?.stop()
+    if (!document || !engine) {
+      set((s) => ({ settings: { ...s.settings, voice } }))
+      return
+    }
+    if (voice === 'browser' && engine instanceof BrowserTtsEngine) {
+      set((s) => ({ settings: { ...s.settings, voice } }))
+      return
+    }
     const newEngine = createEngine(voice)
     if (!newEngine) return
-    const { speakableIds, currentIndex } = get()
-    const currentId = speakableIds[currentIndex]
-    const newIds = getSpeakableIds(document, get().settings)
-    const newQueue = buildQueue(
-      newEngine,
-      document,
-      () => ({
-        rate: get().settings.rate,
-        volume: get().settings.volume,
-        sentencePause: get().settings.sentencePause,
-        sentencePauseSeconds: get().settings.sentencePauseSeconds,
-      }),
-      (i) => set({ currentIndex: i }),
-      () => set({ isPlaying: false }),
-      (message) => {
-        console.error(message)
-        set({ isPlaying: false })
-      },
-    )
-    const newIndex = currentId ? Math.max(newIds.indexOf(currentId), 0) : 0
-    set({ engine: newEngine, queue: newQueue, speakableIds: newIds, currentIndex: newIndex, isPlaying: false })
+    rebuildQueue(newEngine, { voice })
   },
 
   getOptions: () => {
@@ -240,28 +245,8 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   },
 
   rebuildSpeakable: () => {
-    const { document, engine, speakableIds, currentIndex, settings, queue } = get()
-    if (!document || !engine) return
-    const currentId = speakableIds[currentIndex]
-    queue?.stop()
-    const newIds = getSpeakableIds(document, settings)
-    const newQueue = buildQueue(
-      engine,
-      document,
-      () => ({
-        rate: get().settings.rate,
-        volume: get().settings.volume,
-        sentencePause: get().settings.sentencePause,
-        sentencePauseSeconds: get().settings.sentencePauseSeconds,
-      }),
-      (i) => set({ currentIndex: i }),
-      () => set({ isPlaying: false }),
-      (message) => {
-        console.error(message)
-        set({ isPlaying: false })
-      },
-    )
-    const newIndex = currentId ? Math.max(newIds.indexOf(currentId), 0) : 0
-    set({ queue: newQueue, speakableIds: newIds, currentIndex: newIndex, isPlaying: false })
+    const { engine } = get()
+    if (!engine) return
+    rebuildQueue(engine)
   },
 }))

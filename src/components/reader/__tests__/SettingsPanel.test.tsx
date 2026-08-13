@@ -144,6 +144,20 @@ describe('SettingsPanel 音色选择', () => {
     expect(screen.getByRole('option', { name: '浏览器语音' })).toBeEnabled()
   })
 
+  it('余额加载中不显示云端音色锁定态', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (String(url).includes('/api/tts/voices')) {
+        return Promise.resolve(jsonResponse({ voices: [{ id: 'nova', name: 'Nova（温暖）' }] }))
+      }
+      return new Promise<Response>(() => {})
+    })
+    render(<SettingsPanel onClose={vi.fn()} />)
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Nova（温暖）' })).toBeEnabled()
+    })
+    expect(screen.queryByRole('link', { name: /购买积分后使用云音色/ })).not.toBeInTheDocument()
+  })
+
   it('音色接口失败时下拉仅保留浏览器音色', async () => {
     fetchMock.mockImplementation((url: string) => {
       if (String(url).includes('/api/tts/voices')) {

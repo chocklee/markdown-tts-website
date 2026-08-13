@@ -17,7 +17,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const toggleSkipCode = useReaderStore((s) => s.toggleSkipCode)
   const toggleSkipTable = useReaderStore((s) => s.toggleSkipTable)
   const [purchased, setPurchased] = useState<boolean | null>(null)
-  const [creditsBalance, setCreditsBalance] = useState<number>(0)
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null)
   const [voices, setVoices] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     }
   }, [])
 
-  const cloudLocked = creditsBalance <= 0
+  const cloudLocked = creditsBalance !== null && creditsBalance <= 0
 
   return (
     <div>
