@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { pool } from '@/lib/db/pool'
 import { hashPassword } from '@/lib/auth/password'
 import { sendVerificationEmail } from '@/lib/email/send'
+import { grantSignupBonus } from '@/lib/db/credits'
 import { CONFIG } from '@/lib/config'
 import { clientIp, isRateLimited } from '@/lib/security/rateLimit'
 
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
       [email, token, expiresAt, userRows[0].id],
     )
     verificationToken = rows[0].token
+    await grantSignupBonus(client, userRows[0].id, CONFIG.credits.bonusOnRegister)
     await client.query('COMMIT')
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})

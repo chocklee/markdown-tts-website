@@ -1,4 +1,5 @@
 import { pool } from '@/lib/db/pool'
+import type { PoolClient } from 'pg'
 import { CONFIG } from '@/lib/config'
 
 export function canDeduct(balance: bigint, amount: bigint): boolean {
@@ -102,24 +103,28 @@ export async function listTransactions(
   return { items, nextCursor }
 }
 
+export async function grantSignupBonus(client: PoolClient, userId: string, amount: number): Promise<boolean> {
+  const { rowCount } = await client.query(
+    'SELECT 1 FROM credit_transactions WHERE user_id = $1 LIMIT 1',
+    [userId],
+  )
+  if (rowCount !== 0) return false
+  await client.query(
+    "INSERT INTO credit_transactions (user_id, amount, kind, description) VALUES ($1, $2, 'bonus', '注册赠送积分')",
+    [userId, amount],
+  )
+  await client.query('UPDATE users SET credits_balance = credits_balance + $1 WHERE id = $2', [
+    amount,
+    userId,
+  ])
+  return true
+}
+
 export async function grantSignupBonusIfNew(userId: string, amount: number): Promise<void> {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const { rowCount } = await client.query(
-      'SELECT 1 FROM credit_transactions WHERE user_id = $1 LIMIT 1',
-      [userId],
-    )
-    if (rowCount === 0) {
-      await client.query(
-        "INSERT INTO credit_transactions (user_id, amount, kind, description) VALUES ($1, $2, 'bonus', '注册赠送积分')",
-        [userId, amount],
-      )
-      await client.query(
-        'UPDATE users SET credits_balance = credits_balance + $1 WHERE id = $2',
-        [amount, userId],
-      )
-    }
+    await grantSignupBonus(client, userId, amount)
     await client.query('COMMIT')
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})

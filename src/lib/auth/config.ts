@@ -4,6 +4,8 @@ import Credentials from 'next-auth/providers/credentials'
 import { pool } from '@/lib/db/pool'
 import { hashPassword, verifyPassword } from '@/lib/auth/password'
 import { clientIp, isRateLimited } from '@/lib/security/rateLimit'
+import { grantSignupBonusIfNew } from '@/lib/db/credits'
+import { CONFIG } from '@/lib/config'
 
 const DUMMY_HASH = hashPassword('timing-equalizer-dummy')
 
@@ -95,6 +97,11 @@ export const authConfig = {
     session({ session, token }) {
       if (typeof token.uid === 'string') session.user.id = token.uid
       return session
+    },
+  },
+  events: {
+    async createUser({ user }) {
+      if (user.id) await grantSignupBonusIfNew(user.id, CONFIG.credits.bonusOnRegister)
     },
   },
 } satisfies NextAuthConfig
