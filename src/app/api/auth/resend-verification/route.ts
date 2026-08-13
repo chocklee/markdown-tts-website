@@ -18,21 +18,32 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
   }
-  const email = body.email?.trim().toLowerCase() ?? ''
+  if (typeof body !== 'object' || body === null) {
+    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+  }
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  if (email.length > 254) {
+    return NextResponse.json({ error: '邮箱格式不正确' }, { status: 400 })
+  }
 
-  const { rows } = await pool.query<{ emailVerified: Date | null }>(
-    'SELECT "emailVerified" FROM users WHERE email = $1',
-    [email],
-  )
-  if (rows[0] && !rows[0].emailVerified) {
-    const token = randomBytes(32).toString('hex')
-    const expiresAt = new Date(Date.now() + CONFIG.auth.verificationTtlMs)
-    await pool.query('INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)', [
-      email,
-      token,
-      expiresAt,
-    ])
-    await sendVerificationEmail(email, token).catch((err) => console.error('resend failed', err))
+  try {
+    const { rows } = await pool.query<{ emailVerified: Date | null }>(
+      'SELECT "emailVerified" FROM users WHERE lower(email) = lower($1)',
+      [email],
+    )
+    if (rows[0] && !rows[0].emailVerified) {
+      const token = randomBytes(32).toString('hex')
+      const expiresAt = new Date(Date.now() + CONFIG.auth.verificationTtlMs)
+      await pool.query('INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)', [
+        email,
+        token,
+        expiresAt,
+      ])
+      await sendVerificationEmail(email, token).catch((err) => console.error('resend failed', err))
+    }
+  } catch (err) {
+    console.error('resend verification failed', err)
+    return NextResponse.json({ error: '操作失败，请稍后再试' }, { status: 500 })
   }
 
   // 无论邮箱是否存在都返回成功，避免账号枚举

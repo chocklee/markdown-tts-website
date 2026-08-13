@@ -19,10 +19,13 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
   }
+  if (typeof body !== 'object' || body === null) {
+    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+  }
 
-  const email = body.email?.trim().toLowerCase() ?? ''
-  const password = body.password ?? ''
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const password = typeof body.password === 'string' ? body.password : ''
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return NextResponse.json({ error: '邮箱格式不正确' }, { status: 400 })
   }
   if (password.length < 8) {
@@ -34,14 +37,14 @@ export async function POST(req: Request) {
 
   const client = await pool.connect()
   let verificationToken = ''
+  const passwordHash = hashPassword(password)
   try {
     await client.query('BEGIN')
-    const existing = await client.query('SELECT id FROM users WHERE email = $1', [email])
+    const existing = await client.query('SELECT id FROM users WHERE lower(email) = lower($1)', [email])
     if (existing.rowCount) {
       await client.query('ROLLBACK')
       return NextResponse.json({ error: '该邮箱已注册' }, { status: 409 })
     }
-    const passwordHash = hashPassword(password)
     await client.query(
       'INSERT INTO users (email, password_hash, storage_quota_bytes) VALUES ($1, $2, $3)',
       [email, passwordHash, CONFIG.quota.freeBytes],
@@ -56,6 +59,9 @@ export async function POST(req: Request) {
     await client.query('COMMIT')
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
+    if (typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505') {
+      return NextResponse.json({ error: '该邮箱已注册' }, { status: 409 })
+    }
     console.error('register failed', err)
     return NextResponse.json({ error: '注册失败，请稍后再试' }, { status: 500 })
   } finally {
