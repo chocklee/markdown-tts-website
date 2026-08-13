@@ -8,19 +8,17 @@ interface SynthesizeResponse {
 interface PrefetchedAudio {
   text: string
   rate: number
-  blob: Blob
   objectUrl: string
 }
 
 interface PrefetchResult {
-  blob: Blob
   objectUrl: string
 }
 
 interface PrefetchRequest {
   text: string
   rate: number
-  promise: Promise<PrefetchResult | null>
+  promise: Promise<PrefetchResult | null> | null
   taken: boolean
 }
 
@@ -50,7 +48,7 @@ export class CloudTtsEngine implements TtsEngine {
     this.voice = voice
   }
 
-  prefetch(text: string, options: Pick<SpeakOptions, 'rate' | 'volume'>): void {
+  prefetch(text: string, options: Pick<SpeakOptions, 'rate'>): void {
     const rate = options.rate
     if (
       (this.prefetchRequest && this.prefetchRequest.text === text && this.prefetchRequest.rate === rate) ||
@@ -59,20 +57,20 @@ export class CloudTtsEngine implements TtsEngine {
       return
     }
     this.clearPrefetched()
-    const request: PrefetchRequest = { text, rate, promise: Promise.resolve(null), taken: false }
+    const request: PrefetchRequest = { text, rate, promise: null, taken: false }
     const promise = this.fetchAudio(text, rate)
-      .then(async (data): Promise<PrefetchResult | null> => {
+      .then((data): PrefetchResult | null => {
         if (this.prefetchRequest !== request && !request.taken) return null
         const blob = new Blob([base64ToBytes(data.audio)], { type: data.contentType })
         const objectUrl = URL.createObjectURL(blob)
-        return { blob, objectUrl }
+        return { objectUrl }
       })
       .then((result) => {
         if (!result) return null
         if (this.prefetchRequest === request) {
           this.prefetchRequest = null
           this.clearPrefetched()
-          this.prefetched = { text, rate, blob: result.blob, objectUrl: result.objectUrl }
+          this.prefetched = { text, rate, objectUrl: result.objectUrl }
           return result
         }
         if (request.taken) return result
@@ -92,6 +90,7 @@ export class CloudTtsEngine implements TtsEngine {
     if (this.prefetched && this.prefetched.text === text && this.prefetched.rate === options.rate) {
       const objectUrl = this.prefetched.objectUrl
       this.prefetched = null
+      this.stopCurrentAudio()
       this.playObjectUrl(objectUrl, options)
       return
     }
@@ -100,16 +99,15 @@ export class CloudTtsEngine implements TtsEngine {
       const epoch = this.epoch
       this.prefetchRequest = null
       request.taken = true
-      request.promise.then(
+      request.promise?.then(
         (result) => {
           if (epoch !== this.epoch) {
             if (result) URL.revokeObjectURL(result.objectUrl)
             return
           }
           if (result) {
+            this.stopCurrentAudio()
             this.playObjectUrl(result.objectUrl, options)
-          } else {
-            options.onerror(new Error('语音合成失败，请稍后再试'))
           }
         },
         (error) => {
@@ -152,11 +150,7 @@ export class CloudTtsEngine implements TtsEngine {
   cancel(): void {
     this.epoch += 1
     this.paused = false
-    if (this.audio) {
-      this.audio.pause()
-      this.audio = null
-    }
-    this.revokeUrl()
+    this.stopCurrentAudio()
     this.clearPrefetched()
     this.prefetchRequest = null
   }
@@ -211,6 +205,14 @@ export class CloudTtsEngine implements TtsEngine {
       URL.revokeObjectURL(this.objectUrl)
       this.objectUrl = null
     }
+  }
+
+  private stopCurrentAudio(): void {
+    if (this.audio) {
+      this.audio.pause()
+      this.audio = null
+    }
+    this.revokeUrl()
   }
 
   private clearPrefetched(): void {

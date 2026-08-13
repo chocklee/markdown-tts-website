@@ -145,7 +145,9 @@ export class SpeechQueue {
   private prefetchNext(opts: SpeechOptions): void {
     const nextIndex = this.index + 1
     if (nextIndex >= this.texts.length) return
-    this.engine.prefetch?.(this.texts[nextIndex], { rate: opts.rate, volume: opts.volume })
+    // 预取：当前句开始播放时后台合成下一句，服务端合成即扣费（缓存命中 0 扣），
+    // 因此扣费时点提前、中途停止不回收；整段连续播放总数等价、同句不重复扣。
+    this.engine.prefetch?.(this.texts[nextIndex], { rate: opts.rate })
   }
 
   private clearPauseTimer(): void {

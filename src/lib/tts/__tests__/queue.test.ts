@@ -4,15 +4,15 @@ import type { TtsEngine } from '../engine'
 
 class FakeEngine implements TtsEngine {
   speakCalls: { text: string; rate: number; volume: number; onend: () => void; onerror: (e: unknown) => void }[] = []
-  prefetchCalls: { text: string; rate: number; volume: number }[] = []
+  prefetchCalls: { text: string; rate: number }[] = []
   paused = false
   cancelled = false
 
   speak(text: string, opts: { rate: number; volume: number; onend: () => void; onerror: (e: unknown) => void }): void {
     this.speakCalls.push({ text, rate: opts.rate, volume: opts.volume, onend: opts.onend, onerror: opts.onerror })
   }
-  prefetch(text: string, opts: { rate: number; volume: number }): void {
-    this.prefetchCalls.push({ text, rate: opts.rate, volume: opts.volume })
+  prefetch(text: string, opts: { rate: number }): void {
+    this.prefetchCalls.push({ text, rate: opts.rate })
   }
   pause(): void { this.paused = true }
   resume(): void { this.paused = false }
@@ -214,7 +214,6 @@ describe('SpeechQueue', () => {
     expect(engine.prefetchCalls).toHaveLength(1)
     expect(engine.prefetchCalls[0].text).toBe('b。')
     expect(engine.prefetchCalls[0].rate).toBe(1)
-    expect(engine.prefetchCalls[0].volume).toBe(1)
   })
 
   it('倒数第二句预取最后一句，最后一句不再预取', () => {

@@ -7,7 +7,7 @@ export interface SpeakOptions {
 
 export interface TtsEngine {
   speak(text: string, options: SpeakOptions): void
-  prefetch?(text: string, options: Pick<SpeakOptions, 'rate' | 'volume'>): void
+  prefetch?(text: string, options: Pick<SpeakOptions, 'rate'>): void
   pause(): void
   resume(): void
   cancel(): void
