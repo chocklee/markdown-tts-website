@@ -19,8 +19,8 @@ export function estimateCostUsd(chars: number, costPerMillionChars: number): num
   return Math.round((chars * costPerMillionChars) / 1_000_000 * 1e6) / 1e6
 }
 
-export function textHash(provider: string, voice: string, text: string): string {
-  return createHash('sha256').update(`${provider}|${voice}|${text}`).digest('hex')
+export function textHash(provider: string, voice: string, text: string, rate: number): string {
+  return createHash('sha256').update(`${provider}|${voice}|${text}|${rate}`).digest('hex')
 }
 
 export function isValidRate(rate: number): boolean {

@@ -38,16 +38,20 @@ describe('calcCredits', () => {
 
 describe('textHash', () => {
   it('相同输入稳定输出', () => {
-    expect(textHash('openai', 'alloy', '你好')).toBe(textHash('openai', 'alloy', '你好'))
+    expect(textHash('openai', 'alloy', '你好', 1)).toBe(textHash('openai', 'alloy', '你好', 1))
   })
 
   it('不同输入产生不同哈希', () => {
-    expect(textHash('openai', 'alloy', '你好')).not.toBe(textHash('openai', 'nova', '你好'))
-    expect(textHash('openai', 'alloy', '你好')).not.toBe(textHash('openai', 'alloy', '你好 '))
+    expect(textHash('openai', 'alloy', '你好', 1)).not.toBe(textHash('openai', 'nova', '你好', 1))
+    expect(textHash('openai', 'alloy', '你好', 1)).not.toBe(textHash('openai', 'alloy', '你好 ', 1))
+  })
+
+  it('同文本不同语速产生不同哈希', () => {
+    expect(textHash('openai', 'alloy', '你好', 1)).not.toBe(textHash('openai', 'alloy', '你好', 1.5))
   })
 
   it('输出为十六进制字符串', () => {
-    expect(textHash('openai', 'alloy', 'x')).toMatch(/^[0-9a-f]{64}$/)
+    expect(textHash('openai', 'alloy', 'x', 1)).toMatch(/^[0-9a-f]{64}$/)
   })
 })
 

@@ -49,13 +49,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '语音服务未配置' }, { status: 500 })
   }
 
-  const textHashKey = textHash(provider.id, voice, text)
+  const textHashKey = textHash(provider.id, voice, text, rate)
   const chars = countChars(text)
 
-  const cached = await getCachedAudio(provider.id, voice, textHashKey)
+  const cached = await getCachedAudio(provider.id, voice, textHashKey, rate, CONFIG.tts.cacheTtlDays)
   if (cached) {
     return NextResponse.json({
-      audio: Buffer.from(cached.audio).toString('base64'),
+      audio: cached.audio.toString('base64'),
       contentType: cached.contentType,
       chars,
       creditsCharged: 0,
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    await upsertCachedAudio(provider.id, voice, textHashKey, result.audio, result.contentType, chars)
+    await upsertCachedAudio(provider.id, voice, textHashKey, rate, result.audio, result.contentType, chars)
   } catch (err) {
     console.error('upsert tts cache failed', err)
   }
