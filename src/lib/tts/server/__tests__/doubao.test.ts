@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { doubaoProvider } from '../doubao'
+import { doubaoProvider, VOICE_MAP, VOICE_NAMES } from '../doubao'
 
 const DOUBAO_URL = 'https://openspeech.bytedance.com/api/v3/tts/unidirectional'
 
@@ -285,12 +285,20 @@ describe('doubaoProvider', () => {
     ).rejects.toThrow('合成失败')
   })
 
-  it('voices：4 个豆包展示名，id 与 VOICE_MAP key 一致', () => {
+  it('voices：4 个豆包展示名，id 与 VOICE_MAP key 完全一致', () => {
     expect(doubaoProvider.voices).toEqual([
       { id: 'alloy', name: 'Vivi 2.0（中性）' },
       { id: 'nova', name: '甜美桃子 2.0（温暖）' },
       { id: 'shimmer', name: '清新女声 2.0（明亮）' },
       { id: 'echo', name: '高冷沉稳 2.0（沉稳）' },
     ])
+
+    const ids = doubaoProvider.voices.map((v) => v.id)
+    expect(new Set(ids)).toEqual(new Set(Object.keys(VOICE_MAP)))
+    expect(doubaoProvider.voices).toHaveLength(Object.keys(VOICE_MAP).length)
+    for (const v of doubaoProvider.voices) {
+      expect(v.name).toBe(VOICE_NAMES[v.id])
+      expect(v.name.length).toBeGreaterThan(0)
+    }
   })
 })

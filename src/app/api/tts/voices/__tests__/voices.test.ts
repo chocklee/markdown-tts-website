@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { GET } from '../route'
 import { getProvider } from '@/lib/tts/server/provider'
+import type { TtsProvider } from '@/lib/tts/server/provider'
 
 vi.mock('@/lib/tts/server/provider', () => ({ getProvider: vi.fn() }))
 
 describe('GET /api/tts/voices', () => {
   afterEach(() => {
     vi.mocked(getProvider).mockReset()
+    vi.restoreAllMocks()
   })
 
   it('返回当前供应商的音色列表', async () => {
@@ -18,7 +20,7 @@ describe('GET /api/tts/voices', () => {
         { id: 'nova', name: '甜美桃子 2.0（温暖）' },
       ],
       synthesize: vi.fn(),
-    })
+    } satisfies TtsProvider)
 
     const res = await GET()
 
@@ -32,6 +34,7 @@ describe('GET /api/tts/voices', () => {
   })
 
   it('getProvider 抛错时返回 500「语音服务未配置」', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.mocked(getProvider).mockImplementation(() => {
       throw new Error('unknown tts provider: x')
     })

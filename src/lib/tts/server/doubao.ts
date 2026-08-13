@@ -7,19 +7,24 @@ const RESOURCE_ID = 'seed-tts-2.0'
 const SUCCESS_CODE = 0
 const END_CODE = 20000000
 
-const VOICE_MAP: Record<string, string> = {
+export const VOICE_MAP: Record<string, string> = {
   alloy: 'zh_female_vv_uranus_bigtts',
   nova: 'zh_female_tianmeitaozi_uranus_bigtts',
   shimmer: 'zh_female_qingxinnvsheng_uranus_bigtts',
   echo: 'zh_male_gaolengchenwen_uranus_bigtts',
 }
 
-const VOICES: TtsProvider['voices'] = [
-  { id: 'alloy', name: 'Vivi 2.0（中性）' },
-  { id: 'nova', name: '甜美桃子 2.0（温暖）' },
-  { id: 'shimmer', name: '清新女声 2.0（明亮）' },
-  { id: 'echo', name: '高冷沉稳 2.0（沉稳）' },
-]
+export const VOICE_NAMES: Record<string, string> = {
+  alloy: 'Vivi 2.0（中性）',
+  nova: '甜美桃子 2.0（温暖）',
+  shimmer: '清新女声 2.0（明亮）',
+  echo: '高冷沉稳 2.0（沉稳）',
+}
+
+const VOICES: TtsProvider['voices'] = Object.keys(VOICE_MAP).map((id) => ({
+  id,
+  name: VOICE_NAMES[id],
+}))
 
 function toSpeechRate(rate: number): number {
   return Math.min(100, Math.max(-50, Math.round((rate - 1) * 100)))
