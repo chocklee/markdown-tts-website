@@ -9,7 +9,7 @@ export function scheduleSync(delayMs = 2000): void {
   timer = setTimeout(() => void flushSync(), delayMs)
 }
 
-async function flushSync(): Promise<void> {
+export async function flushSync(): Promise<void> {
   if (running) {
     pending = true
     return
@@ -25,5 +25,12 @@ async function flushSync(): Promise<void> {
       pending = false
       scheduleSync(0)
     }
+  }
+}
+
+export function cancelScheduledSync(): void {
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
   }
 }
