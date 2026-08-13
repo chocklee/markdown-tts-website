@@ -14,6 +14,9 @@ export function Header() {
           听 Markdown
         </Link>
         <nav className="flex items-center gap-4 text-sm">
+          <Link href="/library" className="text-slate-600 hover:text-slate-900">
+            文档库
+          </Link>
           {status === 'authenticated' ? (
             <>
               <span className="hidden text-slate-500 sm:inline">{session.user?.email}</span>

@@ -1,40 +1,43 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest'
-import { clearPosition, loadDocument, loadPosition, saveDocument, savePosition } from '../local'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { loadLegacyDocument, savePosition, loadPosition, clearPosition } from '../local'
 
-describe('local storage', () => {
-  beforeEach(() => {
-    localStorage.clear()
+const legacy = { id: 'doc-1', title: '测试', content: '# 你好', savedAt: Date.now() }
+
+describe('loadLegacyDocument', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('无旧文档时返回 null', () => {
+    expect(loadLegacyDocument()).toBeNull()
   })
 
-  it('保存并读取文档', () => {
-    saveDocument({ id: 'doc-1', title: '笔记', content: '# hi', savedAt: 1 })
-    expect(loadDocument()).toEqual({ id: 'doc-1', title: '笔记', content: '# hi', savedAt: 1 })
+  it('读取 M1 遗留单文档', () => {
+    localStorage.setItem('mtts:doc', JSON.stringify(legacy))
+    expect(loadLegacyDocument()).toEqual(legacy)
   })
 
-  it('无文档时返回 null', () => {
-    expect(loadDocument()).toBeNull()
+  it('损坏数据返回 null', () => {
+    localStorage.setItem('mtts:doc', 'not-json')
+    expect(loadLegacyDocument()).toBeNull()
+  })
+})
+
+describe('位置记忆', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('保存并读取位置', () => {
+    savePosition('d1', 's5')
+    expect(loadPosition('d1')).toBe('s5')
   })
 
-  it('保存并读取位置（仅匹配同一文档）', () => {
-    savePosition('doc-1', 's3')
-    expect(loadPosition('doc-1')).toBe('s3')
-    expect(loadPosition('doc-2')).toBeNull()
+  it('其他文档的位置不串用', () => {
+    savePosition('d1', 's5')
+    expect(loadPosition('d2')).toBeNull()
   })
 
-  it('清除位置后读取为 null', () => {
-    savePosition('doc-1', 's3')
+  it('清除位置', () => {
+    savePosition('d1', 's5')
     clearPosition()
-    expect(loadPosition('doc-1')).toBeNull()
-  })
-
-  it('损坏的 JSON 返回 null', () => {
-    localStorage.setItem('mtts:doc', '{broken')
-    expect(loadDocument()).toBeNull()
-  })
-
-  it('形状不完整的 JSON 返回 null', () => {
-    localStorage.setItem('mtts:doc', JSON.stringify({ id: 'doc-1' }))
-    expect(loadDocument()).toBeNull()
+    expect(loadPosition('d1')).toBeNull()
   })
 })

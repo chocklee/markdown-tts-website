@@ -1,29 +1,29 @@
-export interface StoredDocument {
+export interface LegacyStoredDocument {
   id: string
   title: string
   content: string
   savedAt: number
 }
 
-const DOC_KEY = 'mtts:doc'
+const LEGACY_DOC_KEY = 'mtts:doc'
 const POS_KEY = 'mtts:pos'
 
-export function saveDocument(doc: StoredDocument): void {
-  localStorage.setItem(DOC_KEY, JSON.stringify(doc))
-}
-
-export function loadDocument(): StoredDocument | null {
-  const raw = localStorage.getItem(DOC_KEY)
+export function loadLegacyDocument(): LegacyStoredDocument | null {
+  const raw = localStorage.getItem(LEGACY_DOC_KEY)
   if (!raw) return null
   try {
-    const parsed = JSON.parse(raw) as Partial<StoredDocument>
+    const parsed = JSON.parse(raw) as Partial<LegacyStoredDocument>
     if (typeof parsed.id !== 'string' || typeof parsed.title !== 'string' || typeof parsed.content !== 'string') {
       return null
     }
-    return parsed as StoredDocument
+    return parsed as LegacyStoredDocument
   } catch {
     return null
   }
+}
+
+export function clearLegacyDocument(): void {
+  localStorage.removeItem(LEGACY_DOC_KEY)
 }
 
 export function savePosition(docId: string, sentenceId: string): void {

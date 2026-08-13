@@ -20,7 +20,7 @@
 - Test: `src/lib/storage/__tests__/library.test.ts`
 - Modify: `src/test/setup.ts`
 
-- [ ] **Step 1: 在 `src/test/setup.ts` 顶部加入 fake-indexeddb**
+- [x] **Step 1: 在 `src/test/setup.ts` 顶部加入 fake-indexeddb**
 
 ```ts
 import 'fake-indexeddb/auto'
@@ -31,7 +31,7 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
 }
 ```
 
-- [ ] **Step 2: 写失败测试 `src/lib/storage/__tests__/library.test.ts`**
+- [x] **Step 2: 写失败测试 `src/lib/storage/__tests__/library.test.ts`**
 
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -86,12 +86,12 @@ describe('IndexedDB 文档库', () => {
 })
 ```
 
-- [ ] **Step 3: 运行确认失败**
+- [x] **Step 3: 运行确认失败**
 
 Run: `npx vitest run src/lib/storage/__tests__/library.test.ts`
 Expected: FAIL（`@/types/document` / `../library` 不存在）
 
-- [ ] **Step 4: 创建 `src/types/document.ts`**
+- [x] **Step 4: 创建 `src/types/document.ts`**
 
 ```ts
 export interface SyncedDocument {
@@ -119,7 +119,7 @@ export function contentHashOf(content: string): string {
 }
 ```
 
-- [ ] **Step 5: 创建 `src/lib/storage/library.ts`**
+- [x] **Step 5: 创建 `src/lib/storage/library.ts`**
 
 ```ts
 import type { LibraryDocument } from '@/types/document'
@@ -189,12 +189,12 @@ export async function deleteDocument(docId: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 6: 运行确认通过**
+- [x] **Step 6: 运行确认通过**
 
 Run: `npx vitest run src/lib/storage/__tests__/library.test.ts`
 Expected: 4 个用例 PASS
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 git add src/types/document.ts src/lib/storage/library.ts src/lib/storage/__tests__/library.test.ts src/test/setup.ts
@@ -210,7 +210,7 @@ git commit -m "feat(library): add IndexedDB document store"
 - Test: `src/lib/library/__tests__/actions.test.ts`
 - Modify: `src/lib/storage/local.ts`
 
-- [ ] **Step 1: 写失败测试 `src/lib/library/__tests__/actions.test.ts`**
+^- [x] **Step 1: 写失败测试 `src/lib/library/__tests__/actions.test.ts`**
 
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -303,12 +303,12 @@ describe('文档操作层', () => {
 })
 ```
 
-- [ ] **Step 2: 运行确认失败**
+^- [x] **Step 2: 运行确认失败**
 
 Run: `npx vitest run src/lib/library/__tests__/actions.test.ts`
 Expected: FAIL（模块不存在）
 
-- [ ] **Step 3: 修改 `src/lib/storage/local.ts`（保留位置记忆，单文档读写改为迁移专用）**
+^- [x] **Step 3: 修改 `src/lib/storage/local.ts`（保留位置记忆，单文档读写改为迁移专用）**
 
 ```ts
 export interface LegacyStoredDocument {
@@ -355,7 +355,7 @@ export function clearPosition(): void {
 }
 ```
 
-- [ ] **Step 4: 更新 `src/lib/storage/__tests__/local.test.ts`（移除旧单文档读写用例）**
+^- [x] **Step 4: 更新 `src/lib/storage/__tests__/local.test.ts`（移除旧单文档读写用例）**
 
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -402,7 +402,7 @@ describe('位置记忆', () => {
 })
 ```
 
-- [ ] **Step 5: 实现 `src/lib/library/actions.ts`**
+^- [x] **Step 5: 实现 `src/lib/library/actions.ts`**
 
 ```ts
 import type { LibraryDocument } from '@/types/document'
@@ -505,12 +505,12 @@ export function activeBytes(docs: Pick<LibraryDocument, 'deletedAt' | 'fileSizeB
 }
 ```
 
-- [ ] **Step 6: 运行全部测试确认通过**
+^- [x] **Step 6: 运行全部测试确认通过**
 
 Run: `npm run test`
 Expected: 通过（原 82 个用例中 local.test.ts 已更新；新增 actions/library 用例）
 
-- [ ] **Step 7: 提交**
+^- [x] **Step 7: 提交**
 
 ```bash
 git add src/lib/library/actions.ts src/lib/library/__tests__/actions.test.ts src/lib/storage/local.ts src/lib/storage/__tests__/local.test.ts
@@ -526,7 +526,7 @@ git commit -m "feat(library): add document operations and legacy migration"
 - Create: `src/lib/db/documents.ts`
 - Test: `src/lib/db/__tests__/documents.test.ts`
 
-- [ ] **Step 1: 创建 `db/migrations/005_documents.sql`**
+^- [x] **Step 1: 创建 `db/migrations/005_documents.sql`**
 
 ```sql
 CREATE TABLE IF NOT EXISTS "documents" (
@@ -550,7 +550,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_expiry ON documents ("delete_expires_at
 
 执行 `npm run db:migrate`，预期输出 `applied 005_documents.sql`。
 
-- [ ] **Step 2: 写配额纯函数失败测试 `src/lib/db/__tests__/documents.test.ts`**
+^- [x] **Step 2: 写配额纯函数失败测试 `src/lib/db/__tests__/documents.test.ts`**
 
 ```ts
 import { describe, it, expect } from 'vitest'
@@ -584,12 +584,12 @@ describe('exceedsQuota', () => {
 })
 ```
 
-- [ ] **Step 3: 运行确认失败**
+^- [x] **Step 3: 运行确认失败**
 
 Run: `npx vitest run src/lib/db/__tests__/documents.test.ts`
 Expected: FAIL（`../documents` 不存在）
 
-- [ ] **Step 4: 实现 `src/lib/db/documents.ts`**
+^- [x] **Step 4: 实现 `src/lib/db/documents.ts`**
 
 ```ts
 import { pool } from '@/lib/db/pool'
@@ -695,12 +695,12 @@ export async function hardDeleteServerDocument(userId: string, docId: string): P
 }
 ```
 
-- [ ] **Step 5: 运行确认通过**
+^- [x] **Step 5: 运行确认通过**
 
 Run: `npx vitest run src/lib/db/__tests__/documents.test.ts`
 Expected: 3 个用例 PASS
 
-- [ ] **Step 6: 提交**
+^- [x] **Step 6: 提交**
 
 ```bash
 git add db/migrations/005_documents.sql src/lib/db/documents.ts src/lib/db/__tests__/documents.test.ts
@@ -715,7 +715,7 @@ git commit -m "feat(library): add documents table and server access layer"
 - Create: `src/app/api/documents/route.ts`
 - Create: `src/app/api/documents/[docId]/route.ts`
 
-- [ ] **Step 1: 创建 `src/app/api/documents/route.ts`**
+^- [x] **Step 1: 创建 `src/app/api/documents/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -737,7 +737,7 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/app/api/documents/[docId]/route.ts`**
+^- [x] **Step 2: 创建 `src/app/api/documents/[docId]/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -810,25 +810,27 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ docI
 }
 ```
 
-- [ ] **Step 3: 手动验收（curl，需已登录 cookie）**
+^- [x] **Step 3: 手动验收（curl，需已登录 cookie）**
 
 1. 运行 `npm run dev`，浏览器登录一个账号
 2. 从浏览器 DevTools 复制 cookie，或先用 Playwright 登录后调用：
 
 ```bash
+# 生成一个 docId（UUID）
+node -e "console.log(crypto.randomUUID())"
 # 上传一篇文档
-curl -X PUT http://localhost:3000/api/documents/test-doc-1 \
+curl -X PUT http://localhost:3000/api/documents/<uuid> \
   -H 'Content-Type: application/json' \
   -b <cookie> \
-  -d '{"docId":"test-doc-1","title":"测试","content":"# 你好","contentHash":"abc","fileSizeBytes":10,"updatedAt":1700000000000,"deletedAt":null,"deleteExpiresAt":null}'
+  -d '{"docId":"<uuid>","title":"测试","content":"# 你好","contentHash":"abc","fileSizeBytes":10,"updatedAt":1700000000000,"deletedAt":null,"deleteExpiresAt":null}'
 # 预期 {"ok":true}；再次 PUT 更旧的 updatedAt 应返回 409 conflict
 # 列出
 curl http://localhost:3000/api/documents -b <cookie>
 # 彻底删除
-curl -X DELETE http://localhost:3000/api/documents/test-doc-1 -b <cookie>
+curl -X DELETE http://localhost:3000/api/documents/<uuid> -b <cookie>
 ```
 
-- [ ] **Step 4: 提交**
+^- [x] **Step 4: 提交**
 
 ```bash
 git add src/app/api/documents/route.ts src/app/api/documents/[docId]/route.ts
@@ -843,7 +845,7 @@ git commit -m "feat(library): add documents api routes"
 - Create: `src/lib/sync/engine.ts`
 - Test: `src/lib/sync/__tests__/engine.test.ts`
 
-- [ ] **Step 1: 写失败测试 `src/lib/sync/__tests__/engine.test.ts`**
+^- [x] **Step 1: 写失败测试 `src/lib/sync/__tests__/engine.test.ts`**
 
 ```ts
 import { describe, it, expect } from 'vitest'
@@ -922,12 +924,12 @@ describe('computeSyncPlan', () => {
 })
 ```
 
-- [ ] **Step 2: 运行确认失败**
+^- [x] **Step 2: 运行确认失败**
 
 Run: `npx vitest run src/lib/sync/__tests__/engine.test.ts`
 Expected: FAIL（`../engine` 不存在）
 
-- [ ] **Step 3: 实现 `src/lib/sync/engine.ts`**
+^- [x] **Step 3: 实现 `src/lib/sync/engine.ts`**
 
 ```ts
 import type { LibraryDocument, SyncedDocument } from '@/types/document'
@@ -935,18 +937,26 @@ import type { LibraryDocument, SyncedDocument } from '@/types/document'
 export interface SyncPlan {
   uploads: LibraryDocument[]
   downloads: SyncedDocument[]
+  removals: string[]
 }
 
 export function computeSyncPlan(local: LibraryDocument[], remote: SyncedDocument[]): SyncPlan {
   const remoteByDocId = new Map(remote.map((d) => [d.docId, d]))
   const uploads: LibraryDocument[] = []
   const downloads: SyncedDocument[] = []
+  const removals: string[] = []
   const localDocIds = new Set<string>()
 
   for (const localDoc of local) {
     localDocIds.add(localDoc.docId)
     const remoteDoc = remoteByDocId.get(localDoc.docId)
     if (!remoteDoc) {
+      // 云端已不存在（他端彻底删除或已过期清理）：本地已删除的文档直接移除，
+      // 避免把已删文档重新上传回去（删除复活）。
+      if (localDoc.deletedAt !== null) {
+        removals.push(localDoc.docId)
+        continue
+      }
       uploads.push(localDoc)
       continue
     }
@@ -963,16 +973,16 @@ export function computeSyncPlan(local: LibraryDocument[], remote: SyncedDocument
     }
   }
 
-  return { uploads, downloads }
+  return { uploads, downloads, removals }
 }
 ```
 
-- [ ] **Step 4: 运行确认通过**
+^- [x] **Step 4: 运行确认通过**
 
 Run: `npx vitest run src/lib/sync/__tests__/engine.test.ts`
 Expected: 7 个用例 PASS
 
-- [ ] **Step 5: 提交**
+^- [x] **Step 5: 提交**
 
 ```bash
 git add src/lib/sync/engine.ts src/lib/sync/__tests__/engine.test.ts
@@ -987,7 +997,7 @@ git commit -m "feat(library): add sync plan engine"
 - Create: `src/lib/sync/manager.ts`
 - Create: `src/lib/sync/schedule.ts`
 
-- [ ] **Step 1: 创建 `src/lib/sync/manager.ts`**
+^- [x] **Step 1: 创建 `src/lib/sync/manager.ts`**
 
 ```ts
 import type { LibraryDocument, SyncedDocument } from '@/types/document'
@@ -1046,7 +1056,7 @@ export async function runSync(): Promise<SyncResult> {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/lib/sync/schedule.ts`**
+^- [x] **Step 2: 创建 `src/lib/sync/schedule.ts`**
 
 ```ts
 let timer: ReturnType<typeof setTimeout> | null = null
@@ -1078,7 +1088,7 @@ async function flushSync(): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: 提交**
+^- [x] **Step 3: 提交**
 
 ```bash
 git add src/lib/sync/manager.ts src/lib/sync/schedule.ts
@@ -1094,7 +1104,7 @@ git commit -m "feat(library): add sync runner and scheduler"
 - Modify: `src/app/reader/page.tsx`
 - Create: `src/components/reader/ReaderClient.tsx`
 
-- [ ] **Step 1: 重写 `src/components/home/InputSection.tsx`（保存到文件库并触发同步）**
+- [x] **Step 1: 重写 `src/components/home/InputSection.tsx`（保存到文件库并触发同步）**
 
 ```tsx
 'use client'
@@ -1219,7 +1229,7 @@ export default function InputSection() {
 }
 ```
 
-- [ ] **Step 2: 创建 `src/components/reader/ReaderClient.tsx`**
+- [x] **Step 2: 创建 `src/components/reader/ReaderClient.tsx`**
 
 ```tsx
 'use client'
@@ -1306,7 +1316,7 @@ export function ReaderClient({ docId }: { docId: string | null }) {
 ```
 
 位置说明：阅读位置以文件库 `docId` 为 key 保存（与 M1 以内容哈希为 key 不同），重命名或内容变化后位置仍能对应到同一篇文档；句子 id 找不到时 `restoreIndex` 自动忽略。
-- [ ] **Step 3: 重写 `src/app/reader/page.tsx` 为服务端包装**
+- [x] **Step 3: 重写 `src/app/reader/page.tsx` 为服务端包装**
 
 ```tsx
 import { ReaderClient } from '@/components/reader/ReaderClient'
@@ -1323,14 +1333,14 @@ export default async function ReaderPage({
 }
 ```
 
-- [ ] **Step 4: 验证**
+- [x] **Step 4: 验证**
 
 Run: `npm run test && npx tsc --noEmit`
 Expected: 全部通过
 
 手动：`npm run dev` 打开首页粘贴内容 → 开始收听 → 进入阅读器正常朗读；刷新 URL（带 docId）正常恢复；旧 localStorage 有 M1 文档时首次打开自动迁移。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/components/home/InputSection.tsx src/app/reader/page.tsx src/components/reader/ReaderClient.tsx
@@ -1345,11 +1355,11 @@ git commit -m "feat(library): save to library and open reader by docId"
 - Create: `src/app/library/page.tsx`
 - Modify: `src/components/layout/Header.tsx`
 
-- [ ] **Step 1: 创建 `src/app/library/page.tsx`**
+- [x] **Step 1: 创建 `src/app/library/page.tsx`**
 
 ```tsx
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { listDocuments, getDocument } from '@/lib/storage/library'
@@ -1386,7 +1396,7 @@ function daysLeft(expiresAt: number): number {
 }
 
 export default function LibraryPage() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const [docs, setDocs] = useState<LibraryDocument[]>([])
   const [tab, setTab] = useState<Tab>('docs')
   const [quota, setQuota] = useState<{ usedBytes: number; quotaBytes: number } | null>(null)
@@ -1394,6 +1404,7 @@ export default function LibraryPage() {
   const [renameValue, setRenameValue] = useState('')
   const [notice, setNotice] = useState('')
   const [syncing, setSyncing] = useState(false)
+  const syncingRef = useRef(false)
 
   const refresh = useCallback(async () => {
     const all = await listDocuments()
@@ -1401,21 +1412,24 @@ export default function LibraryPage() {
   }, [])
 
   const sync = useCallback(async () => {
-    if (status !== 'authenticated') return
+    if (status !== 'authenticated' || syncingRef.current) return
+    syncingRef.current = true
     setSyncing(true)
     try {
       const result = await runSync()
-      if (result.error) setNotice(result.error)
-      if (result.quotaBytes !== null) {
-        const all = await listDocuments()
-        setQuota({ usedBytes: activeBytes(all), quotaBytes: result.quotaBytes })
-      }
-      if (result.uploaded + result.downloaded > 0) {
+      if (result.error) {
+        setNotice(result.error)
+      } else if (result.uploaded + result.downloaded > 0) {
         setNotice(`已同步：上传 ${result.uploaded} 篇，下载 ${result.downloaded} 篇`)
       }
+      if (result.quotaBytes !== null) {
+        const all = await listDocuments().catch(() => null)
+        if (all) setQuota({ usedBytes: activeBytes(all), quotaBytes: result.quotaBytes })
+      }
     } finally {
+      syncingRef.current = false
       setSyncing(false)
-      await refresh()
+      await refresh().catch(() => {})
     }
   }, [status, refresh])
 
@@ -1445,20 +1459,20 @@ export default function LibraryPage() {
   async function confirmRename() {
     if (!renaming) return
     await renameDocument(renaming, renameValue)
-    scheduleSync()
+    if (status === 'authenticated') scheduleSync()
     setRenaming(null)
     await refresh()
   }
 
   async function remove(docId: string) {
     await softDeleteDocument(docId)
-    scheduleSync()
+    if (status === 'authenticated') scheduleSync()
     await refresh()
   }
 
   async function doRestore(docId: string) {
     await restoreDocument(docId)
-    scheduleSync()
+    if (status === 'authenticated') scheduleSync()
     await refresh()
   }
 
@@ -1592,7 +1606,7 @@ export default function LibraryPage() {
 }
 ```
 
-- [ ] **Step 2: 修改 `src/components/layout/Header.tsx` 加入文档库入口**
+- [x] **Step 2: 修改 `src/components/layout/Header.tsx` 加入文档库入口**
 
 在 `nav` 的登录/退出按钮之前加：
 
@@ -1602,14 +1616,14 @@ export default function LibraryPage() {
 </Link>
 ```
 
-- [ ] **Step 3: 验证**
+- [x] **Step 3: 验证**
 
 Run: `npm run test && npx tsc --noEmit && npm run lint`
 Expected: 通过
 
 手动：未登录访问 `/library` 显示本机文档 + 登录提示；登录后自动同步，配额显示；重命名/删除即时生效。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add src/app/library/page.tsx src/components/layout/Header.tsx
@@ -1624,7 +1638,7 @@ git commit -m "feat(library): add library page with quota and actions"
 - Create: `src/app/api/cron/cleanup-trash/route.ts`
 - Create: `vercel.json`
 
-- [ ] **Step 1: 创建 `src/app/api/cron/cleanup-trash/route.ts`**
+- [x] **Step 1: 创建 `src/app/api/cron/cleanup-trash/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -1645,7 +1659,7 @@ export async function GET(req: Request) {
 }
 ```
 
-- [ ] **Step 2: 创建 `vercel.json`**
+- [x] **Step 2: 创建 `vercel.json`**
 
 ```json
 {
@@ -1658,11 +1672,11 @@ export async function GET(req: Request) {
 }
 ```
 
-- [ ] **Step 3: 设置环境变量**
+- [x] **Step 3: 设置环境变量**
 
 在 Vercel 项目设置中加入 `CRON_SECRET`（`openssl rand -base64 32`），Vercel 会自动以 `Authorization: Bearer <CRON_SECRET>` 调用 cron。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add src/app/api/cron/cleanup-trash/route.ts vercel.json
@@ -1676,7 +1690,7 @@ git commit -m "feat(library): add trash cleanup cron"
 **Files:**
 - Modify: `src/app/login/page.tsx`
 
-- [ ] **Step 1: 登录成功与 Google 回跳改为文档库**
+- [x] **Step 1: 登录成功与 Google 回跳改为文档库**
 
 `src/app/login/page.tsx`：
 
@@ -1689,12 +1703,16 @@ router.refresh()
 onClick={() => void signIn('google', { callbackUrl: '/library' })}
 ```
 
-- [ ] **Step 2: 自动化检查**
+- [x] **Step 2: 自动化检查**
 
 Run: `npm run test && npx tsc --noEmit && npm run lint && npm run build`
 Expected: 全部通过
 
-- [ ] **Step 3: 端到端验收（Playwright / 手动）**
+- [x] **Step 3: 端到端验收（Playwright / 手动）**
+
+> 已完成（真实浏览器 + Neon DB 双设备上下文）：19/19 检查通过，覆盖未登录保存/登录提示、登录后自动同步上传、跨设备拉取（docId 一致）、重命名传播、删除/恢复/彻底删除两端同步、超配额拦截提示（413 文案）、回收站过期惰性清理（本地无复活）。E2E 发现并修复两个缺陷：
+> 1. M2a-1 遗留：自定义 `src/app/api/auth/providers/route.ts` 遮蔽 Auth.js 内置端点，导致 UI 凭据登录永远跳转 `/signin` → 删除自定义路由、登录页改用 `getProviders()`（`fix(auth): restore next-auth providers endpoint so credentials login works`）。
+> 2. 同步引擎对「本地已删除、云端缺失」的文档会重新上传（彻底删除/过期清理后文档复活）→ `SyncPlan` 新增 `removals` 通道，本地已删除且云端缺失的文档改为本地移除（`fix(sync): purge deleted docs locally instead of re-uploading them`）。
 
 1. 未登录：粘贴内容 → 朗读 → `/library` 显示本机文档 + 登录提示
 2. 登录后：`/library` 自动同步，本机文档上传到云端（数据库 `documents` 表可见）
@@ -1704,7 +1722,7 @@ Expected: 全部通过
 6. 超配额测试：临时把 `users.storage_quota_bytes` 改小（如 100）→ 上传大文档被拦截并提示
 7. 回收站过期清理：临时把 `delete_expires_at` 改成过去时间 → 打开 `/library` 或调 cron 后云端该文档被清除
 
-- [ ] **Step 4: 推送**
+- [x] **Step 4: 推送**
 
 ```bash
 git push origin master
