@@ -29,7 +29,7 @@ export default function LoginPage() {
         setError('邮箱或密码错误；未验证的邮箱请先完成邮件验证')
         return
       }
-      router.push('/')
+      router.push('/library')
       router.refresh()
     } catch {
       setError('网络错误，请重试')
@@ -124,7 +124,7 @@ export default function LoginPage() {
       {hasGoogle && (
         <button
           type="button"
-          onClick={() => void signIn('google', { callbackUrl: '/' })}
+          onClick={() => void signIn('google', { callbackUrl: '/library' })}
           className="mt-3 w-full rounded-lg border border-slate-300 py-2.5 text-sm text-slate-700 hover:bg-slate-100"
         >
           使用 Google 登录
