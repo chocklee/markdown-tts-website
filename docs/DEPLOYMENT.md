@@ -14,6 +14,8 @@
 | `RESEND_API_KEY` | ✅ | [resend.com](https://resend.com) → API Keys，格式 `re_...` |
 | `EMAIL_FROM` | 上线前 | 如 `听 Markdown <noreply@你的域名>`；不配则用 Resend 测试发件人，邮件只投递到 Resend 注册邮箱 |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | 可选 | Google Cloud Console 创建 OAuth Client，配置后才显示 Google 登录按钮 |
+| `STRIPE_SECRET_KEY` | 支付上线前 | Stripe 密钥；测试用 `sk_test_...`，上线切 `sk_live_...` |
+| `STRIPE_WEBHOOK_SECRET` | 支付上线前 | Stripe Webhook 签名密钥 `whsec_...`；本地联调用 `stripe listen --forward-to localhost:3000/api/webhooks/stripe` |
 
 本地开发时把同样的变量填到 `.env.local`（已被 `.gitignore` 忽略，不会提交）。
 
