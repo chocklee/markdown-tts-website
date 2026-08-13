@@ -99,7 +99,7 @@
 **Files:**
 - Modify: `docs/DEPLOYMENT.md`（TTS 验证清单 + OPENAI_API_KEY 环境变量）
 
-- [ ] **Step 1: 全量 `npm test` + tsc**
-- [ ] **Step 2: push → Vercel 自动部署**
+- [x] **Step 1: 全量 `npm test` + tsc**
+- [x] **Step 2: push → Vercel 自动部署**
 - [ ] **Step 3: 用户提供 `OPENAI_API_KEY` 后写入 Vercel + 本地，E2E：** 新账号 50 积分 → 云端音色播放 → 余额按字数减少 → 同句重放不扣 → 消费记录出现流水 → 余额耗尽 402 回退浏览器语音
-- [ ] **Step 4: 更新 DEPLOYMENT.md 并提交**
+- [x] **Step 4: 更新 DEPLOYMENT.md 并提交**
