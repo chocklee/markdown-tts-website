@@ -3,6 +3,7 @@ import type { ReaderDocument, ReaderSettings } from '@/types/reader'
 import { defaultSettings } from '@/types/reader'
 import { getSentenceText, getSpeakableIds } from './selectors'
 import { BrowserTtsEngine, type TtsEngine } from '@/lib/tts/engine'
+import { CloudTtsEngine } from '@/lib/tts/cloud'
 import { SpeechQueue, type SpeechOptions } from '@/lib/tts/queue'
 
 interface ReaderState {
@@ -26,10 +27,16 @@ interface ReaderState {
   getOptions: () => SpeechOptions
   setRate: (rate: number) => void
   setVolume: (volume: number) => void
+  setVoice: (voice: string) => void
   setSentencePause: (enabled: boolean) => void
   setSentencePauseSeconds: (seconds: number) => void
   toggleSkipCode: () => void
   toggleSkipTable: () => void
+}
+
+function createEngine(voice: string): TtsEngine | null {
+  if (typeof window === 'undefined') return null
+  return voice === 'browser' ? new BrowserTtsEngine() : new CloudTtsEngine(voice)
 }
 
 function buildQueue(
@@ -55,7 +62,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   engine: null,
 
   init: (document, engine) => {
-    const engineInstance = engine ?? (typeof window !== 'undefined' ? new BrowserTtsEngine() : null)
+    const engineInstance = engine ?? createEngine(get().settings.voice)
     if (!engineInstance) return
 
     get().queue?.stop()
@@ -170,6 +177,38 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
 
   setVolume: (volume) => {
     set((s) => ({ settings: { ...s.settings, volume } }))
+  },
+
+  setVoice: (voice) => {
+    const { settings, document, engine } = get()
+    if (voice === settings.voice) return
+    set((s) => ({ settings: { ...s.settings, voice } }))
+    if (!document || !engine) return
+    if (voice === 'browser' && engine instanceof BrowserTtsEngine) return
+    get().queue?.stop()
+    const newEngine = createEngine(voice)
+    if (!newEngine) return
+    const { speakableIds, currentIndex } = get()
+    const currentId = speakableIds[currentIndex]
+    const newIds = getSpeakableIds(document, get().settings)
+    const newQueue = buildQueue(
+      newEngine,
+      document,
+      () => ({
+        rate: get().settings.rate,
+        volume: get().settings.volume,
+        sentencePause: get().settings.sentencePause,
+        sentencePauseSeconds: get().settings.sentencePauseSeconds,
+      }),
+      (i) => set({ currentIndex: i }),
+      () => set({ isPlaying: false }),
+      (message) => {
+        console.error(message)
+        set({ isPlaying: false })
+      },
+    )
+    const newIndex = currentId ? Math.max(newIds.indexOf(currentId), 0) : 0
+    set({ engine: newEngine, queue: newQueue, speakableIds: newIds, currentIndex: newIndex, isPlaying: false })
   },
 
   getOptions: () => {

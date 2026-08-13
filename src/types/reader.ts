@@ -37,6 +37,7 @@ export interface ReaderDocument {
 }
 
 export interface ReaderSettings {
+  voice: string
   rate: number
   volume: number
   skipCode: boolean
@@ -46,6 +47,7 @@ export interface ReaderSettings {
 }
 
 export const defaultSettings: ReaderSettings = {
+  voice: 'browser',
   rate: 1,
   volume: 1,
   skipCode: true,

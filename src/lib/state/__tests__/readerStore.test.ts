@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useReaderStore } from '../readerStore'
 import { parseDocument } from '@/lib/markdown/parse'
-import type { TtsEngine } from '@/lib/tts/engine'
+import { BrowserTtsEngine, type TtsEngine } from '@/lib/tts/engine'
+import { CloudTtsEngine } from '@/lib/tts/cloud'
 import { defaultSettings } from '@/types/reader'
 
 class FakeEngine implements TtsEngine {
@@ -190,5 +191,33 @@ describe('readerStore', () => {
     useReaderStore.getState().togglePlay()
     expect(useReaderStore.getState().currentIndex).toBe(2)
     expect(engine.speakCalls[engine.speakCalls.length - 1].text).toBe('世界！')
+  })
+
+  it('setVoice 更新 settings.voice 并重建为 CloudTtsEngine，保持当前句', () => {
+    freshStore()
+    expect(useReaderStore.getState().settings.voice).toBe('browser')
+    useReaderStore.getState().seekTo('s3')
+    useReaderStore.getState().setVoice('nova')
+    const state = useReaderStore.getState()
+    expect(state.settings.voice).toBe('nova')
+    expect(state.engine).toBeInstanceOf(CloudTtsEngine)
+    expect(state.queue).not.toBeNull()
+    expect(state.currentIndex).toBe(2)
+    expect(state.isPlaying).toBe(false)
+  })
+
+  it('setVoice 切回浏览器音色重建为 BrowserTtsEngine', () => {
+    freshStore()
+    useReaderStore.getState().setVoice('nova')
+    useReaderStore.getState().setVoice('browser')
+    const state = useReaderStore.getState()
+    expect(state.settings.voice).toBe('browser')
+    expect(state.engine).toBeInstanceOf(BrowserTtsEngine)
+  })
+
+  it('setVoice 相同音色不重建引擎', () => {
+    const { engine } = freshStore()
+    useReaderStore.getState().setVoice('browser')
+    expect(useReaderStore.getState().engine).toBe(engine)
   })
 })

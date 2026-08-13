@@ -11,26 +11,43 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const settings = useReaderStore((s) => s.settings)
   const setRate = useReaderStore((s) => s.setRate)
   const setVolume = useReaderStore((s) => s.setVolume)
+  const setVoice = useReaderStore((s) => s.setVoice)
   const setSentencePause = useReaderStore((s) => s.setSentencePause)
   const setSentencePauseSeconds = useReaderStore((s) => s.setSentencePauseSeconds)
   const toggleSkipCode = useReaderStore((s) => s.toggleSkipCode)
   const toggleSkipTable = useReaderStore((s) => s.toggleSkipTable)
   const [purchased, setPurchased] = useState<boolean | null>(null)
+  const [creditsBalance, setCreditsBalance] = useState<number>(0)
+  const [voices, setVoices] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     let cancelled = false
     void fetch('/api/credits/balance')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled) setPurchased(Boolean(data?.purchased))
+        if (cancelled) return
+        setPurchased(Boolean(data?.purchased))
+        setCreditsBalance(typeof data?.creditsBalance === 'number' ? data.creditsBalance : 0)
       })
       .catch(() => {
-        if (!cancelled) setPurchased(false)
+        if (cancelled) return
+        setPurchased(false)
+        setCreditsBalance(0)
+      })
+    void fetch('/api/tts/voices')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setVoices(Array.isArray(data?.voices) ? data.voices : [])
+      })
+      .catch(() => {
+        if (!cancelled) setVoices([])
       })
     return () => {
       cancelled = true
     }
   }, [])
+
+  const cloudLocked = creditsBalance <= 0
 
   return (
     <div>
@@ -68,6 +85,30 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           className="mt-1 w-full"
         />
       </label>
+
+      <div className="mt-4">
+        <label className="block text-sm text-slate-600">
+          音色
+          <select
+            value={settings.voice}
+            onChange={(e) => setVoice(e.target.value)}
+            aria-label="音色选择"
+            className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+          >
+            <option value="browser">浏览器语音</option>
+            {voices.map((v) => (
+              <option key={v.id} value={v.id} disabled={cloudLocked}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {cloudLocked && (
+          <p className="mt-1 text-xs text-slate-400">
+            🔒 <Link href="/pricing" className="text-blue-600 hover:underline">购买积分后使用云音色</Link>
+          </p>
+        )}
+      </div>
 
       <div className="mt-4 space-y-2">
         <label className="flex items-center gap-2 text-sm text-slate-700">
