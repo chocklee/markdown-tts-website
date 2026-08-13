@@ -27,17 +27,19 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { rows } = await pool.query<{ emailVerified: Date | null }>(
-      'SELECT "emailVerified" FROM users WHERE lower(email) = lower($1)',
+    const { rows } = await pool.query<{ id: string; emailVerified: Date | null }>(
+      'SELECT id, "emailVerified" FROM users WHERE lower(email) = lower($1)',
       [email],
     )
     if (rows[0] && !rows[0].emailVerified) {
       const token = randomBytes(32).toString('hex')
       const expiresAt = new Date(Date.now() + CONFIG.auth.verificationTtlMs)
-      await pool.query('INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)', [
+      await pool.query('DELETE FROM email_verifications WHERE user_id = $1', [rows[0].id])
+      await pool.query('INSERT INTO email_verifications (email, token, expires_at, user_id) VALUES ($1, $2, $3, $4)', [
         email,
         token,
         expiresAt,
+        rows[0].id,
       ])
       await sendVerificationEmail(email, token).catch((err) => console.error('resend failed', err))
     }

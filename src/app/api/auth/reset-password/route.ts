@@ -35,8 +35,8 @@ export async function POST(req: Request) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const { rows } = await client.query<{ email: string; expires_at: Date }>(
-      'SELECT email, expires_at FROM password_resets WHERE token = $1',
+    const { rows } = await client.query<{ user_id: string; expires_at: Date }>(
+      'SELECT user_id, expires_at FROM password_resets WHERE token = $1',
       [token],
     )
     if (rows.length === 0) {
@@ -48,9 +48,9 @@ export async function POST(req: Request) {
       await client.query('COMMIT')
       return NextResponse.json({ error: '重置链接已过期' }, { status: 400 })
     }
-    const result = await client.query('UPDATE users SET password_hash = $1 WHERE email = $2', [
+    const result = await client.query('UPDATE users SET password_hash = $1, password_changed_at = now() WHERE id = $2', [
       passwordHash,
-      rows[0].email,
+      rows[0].user_id,
     ])
     if (result.rowCount === 0) {
       await client.query('ROLLBACK')

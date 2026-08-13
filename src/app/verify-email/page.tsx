@@ -15,8 +15,8 @@ export default async function VerifyEmailPage({
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
-      const { rows } = await client.query<{ email: string; expires_at: Date }>(
-        'SELECT email, expires_at FROM email_verifications WHERE token = $1',
+      const { rows } = await client.query<{ user_id: string; expires_at: Date }>(
+        'SELECT user_id, expires_at FROM email_verifications WHERE token = $1',
         [token],
       )
       if (rows.length === 0) {
@@ -25,9 +25,9 @@ export default async function VerifyEmailPage({
         await client.query('DELETE FROM email_verifications WHERE token = $1', [token])
         status = 'expired'
       } else {
-        await client.query('UPDATE users SET "emailVerified" = now() WHERE email = $1', [rows[0].email])
+        const result = await client.query('UPDATE users SET "emailVerified" = now() WHERE id = $1', [rows[0].user_id])
         await client.query('DELETE FROM email_verifications WHERE token = $1', [token])
-        status = 'success'
+        status = result.rowCount === 1 ? 'success' : 'invalid'
       }
       await client.query('COMMIT')
     } catch (err) {

@@ -45,15 +45,15 @@ export async function POST(req: Request) {
       await client.query('ROLLBACK')
       return NextResponse.json({ error: '该邮箱已注册' }, { status: 409 })
     }
-    await client.query(
-      'INSERT INTO users (email, password_hash, storage_quota_bytes) VALUES ($1, $2, $3)',
+    const { rows: userRows } = await client.query<{ id: string }>(
+      'INSERT INTO users (email, password_hash, storage_quota_bytes) VALUES ($1, $2, $3) RETURNING id',
       [email, passwordHash, CONFIG.quota.freeBytes],
     )
     const token = randomBytes(32).toString('hex')
     const expiresAt = new Date(Date.now() + CONFIG.auth.verificationTtlMs)
     const { rows } = await client.query<{ token: string }>(
-      'INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3) RETURNING token',
-      [email, token, expiresAt],
+      'INSERT INTO email_verifications (email, token, expires_at, user_id) VALUES ($1, $2, $3, $4) RETURNING token',
+      [email, token, expiresAt, userRows[0].id],
     )
     verificationToken = rows[0].token
     await client.query('COMMIT')

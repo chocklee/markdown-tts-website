@@ -3,6 +3,7 @@ import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'
 import { pool } from '@/lib/db/pool'
 import { hashPassword, verifyPassword } from '@/lib/auth/password'
+import { clientIp, isRateLimited } from '@/lib/security/rateLimit'
 
 const DUMMY_HASH = hashPassword('timing-equalizer-dummy')
 
@@ -24,11 +25,19 @@ export const authConfig = {
         email: { label: '邮箱', type: 'email' },
         password: { label: '密码', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
+        if (isRateLimited(`login:${clientIp(request)}`, 10, 15 * 60 * 1000)) return null
         const email = typeof credentials?.email === 'string' ? credentials.email.trim().toLowerCase() : ''
         const password = typeof credentials?.password === 'string' ? credentials.password : ''
         if (!email || !password) return null
-        let user: { id: string; name: string | null; email: string; password_hash: string | null; emailVerified: Date | null } | undefined
+        let user: {
+          id: string
+          name: string | null
+          email: string
+          password_hash: string | null
+          emailVerified: Date | null
+          password_changed_at: Date | null
+        } | undefined
         try {
           const { rows } = await pool.query<{
             id: string
@@ -36,7 +45,11 @@ export const authConfig = {
             email: string
             password_hash: string | null
             emailVerified: Date | null
-          }>('SELECT id, name, email, password_hash, "emailVerified" FROM users WHERE lower(email) = lower($1)', [email])
+            password_changed_at: Date | null
+          }>(
+            'SELECT id, name, email, password_hash, "emailVerified", password_changed_at FROM users WHERE lower(email) = lower($1)',
+            [email],
+          )
           user = rows[0]
         } catch (err) {
           console.error('authorize query failed', err)
@@ -47,14 +60,35 @@ export const authConfig = {
           return null
         }
         if (!verifyPassword(password, user.password_hash)) return null
-        return { id: user.id, name: user.name, email: user.email }
+        return { id: user.id, name: user.name, email: user.email, passwordChangedAt: user.password_changed_at }
       },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
-      if (user?.id) token.uid = user.id
-      return token
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.uid = user.id
+        token.pwdChangedAt = user.passwordChangedAt ? new Date(user.passwordChangedAt).getTime() : null
+        return token
+      }
+      if (!token.uid) return null
+      try {
+        const { rows } = await pool.query<{ password_changed_at: Date | null }>(
+          'SELECT password_changed_at FROM users WHERE id = $1',
+          [token.uid],
+        )
+        if (rows.length === 0) return null
+        const dbValue = rows[0].password_changed_at
+        const tokenPwdChangedAt = token.pwdChangedAt
+        if (dbValue && tokenPwdChangedAt !== undefined && new Date(dbValue).getTime() > (tokenPwdChangedAt ?? 0)) {
+          return null
+        }
+        if (dbValue && tokenPwdChangedAt === undefined) token.pwdChangedAt = new Date(dbValue).getTime()
+        return token
+      } catch (err) {
+        console.error('jwt callback failed', err)
+        return null
+      }
     },
     session({ session, token }) {
       if (typeof token.uid === 'string') session.user.id = token.uid
