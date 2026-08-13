@@ -522,11 +522,11 @@ git commit -m "feat(library): add document operations and legacy migration"
 ### Task 3: documents 表迁移与服务端存取模块
 
 **Files:**
-- Create: `db/migrations/003_documents.sql`
+- Create: `db/migrations/005_documents.sql`
 - Create: `src/lib/db/documents.ts`
 - Test: `src/lib/db/__tests__/documents.test.ts`
 
-- [ ] **Step 1: 创建 `db/migrations/003_documents.sql`**
+- [ ] **Step 1: 创建 `db/migrations/005_documents.sql`**
 
 ```sql
 CREATE TABLE IF NOT EXISTS "documents" (
@@ -548,7 +548,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_user ON documents ("user_id");
 CREATE INDEX IF NOT EXISTS idx_documents_expiry ON documents ("delete_expires_at") WHERE "delete_expires_at" IS NOT NULL;
 ```
 
-执行 `npm run db:migrate`，预期输出 `applied 003_documents.sql`。
+执行 `npm run db:migrate`，预期输出 `applied 005_documents.sql`。
 
 - [ ] **Step 2: 写配额纯函数失败测试 `src/lib/db/__tests__/documents.test.ts`**
 
@@ -703,7 +703,7 @@ Expected: 3 个用例 PASS
 - [ ] **Step 6: 提交**
 
 ```bash
-git add db/migrations/003_documents.sql src/lib/db/documents.ts src/lib/db/__tests__/documents.test.ts
+git add db/migrations/005_documents.sql src/lib/db/documents.ts src/lib/db/__tests__/documents.test.ts
 git commit -m "feat(library): add documents table and server access layer"
 ```
 
@@ -1711,3 +1711,54 @@ git push origin master
 ```
 
 说明：M2a-2 完成后，M2a（账号 + 文件库）整体交付。后续 M2b（积分与支付）、M2c（云 AI 语音）、M2d（文档问答）各自走 spec → plan → 实现循环。
+
+---
+
+### Task 11: 安全加固（共享限流存储 + 过期 token 清理 + 认证 E2E）
+
+> 来源：M2a-1 最终代码审查遗留项（Important: 内存限流在 Vercel serverless 下按实例生效，无法跨隔离聚合；Minor: `email_verifications`/`password_resets` 过期行无定期清理；建议：认证主流程固化为 Playwright 用例）。
+
+**Files:**
+- Create: `db/migrations/006_rate_limits.sql`
+- Modify: `src/lib/security/rateLimit.ts`
+- Test: `src/lib/security/__tests__/rateLimit.test.ts`（改写成纯函数 + DB 集成两条路径）
+- Create: `e2e/auth.spec.ts`（Playwright，可选依赖）
+- Create: `src/app/api/cron/cleanup/route.ts`（或并入 Task 9 的 cron）
+
+- [ ] **Step 1: 创建 `db/migrations/006_rate_limits.sql`**
+
+```sql
+CREATE TABLE IF NOT EXISTS "rate_limits" (
+  "key" text PRIMARY KEY,
+  "count" integer NOT NULL DEFAULT 1,
+  "reset_at" bigint NOT NULL
+);
+```
+
+- [ ] **Step 2: 改写 `src/lib/security/rateLimit.ts` 为 Postgres 存储**
+
+保持 `isRateLimited(key, limit, windowMs)` 与 `clientIp(req)` 签名不变；内部用 `INSERT ... ON CONFLICT (key) DO UPDATE` 原子计数：
+
+```sql
+INSERT INTO rate_limits (key, count, reset_at) VALUES ($1, 1, $now+$window)
+ON CONFLICT (key) DO UPDATE SET count = rate_limits.count + 1
+  WHERE rate_limits.reset_at > $now
+RETURNING count, reset_at
+```
+
+`reset_at` 过期时（`WHERE` 不命中）改走 `UPDATE ... SET count = 1, reset_at = $now+$window`；返回 `count > limit`。查询失败时 fail-open（记日志并返回 false），避免限流器宕机导致整个认证不可用。窗口过期行由每次写入顺带删除（`DELETE FROM rate_limits WHERE reset_at <= $now`，抽样概率 1% 即可）。测试：`isRateLimited` 纯语义用内存 fake 保留，DB 集成测用真实 Neon 少量键验证原子性（复用现有手动验收约定）。
+
+- [ ] **Step 3: 过期 token 清理**
+
+把 `email_verifications`/`password_resets` 中 `expires_at < now()` 的行清理并入 Task 9 的回收站 cron（同一路由内多删一条），并加惰性清理：登录/注册时顺带删除该邮箱的过期行。
+
+- [ ] **Step 4: 认证 E2E（Playwright）**
+
+`e2e/auth.spec.ts`：注册→验证→登录→会话保持→退出；未验证登录被拒；忘记密码→重置→新密码登录；重置后旧会话失效。接真实 Neon（`DATABASE_URL`）跑，测试数据统一 `m2a-e2e-` 前缀并在 afterAll 清理。
+
+- [ ] **Step 5: 提交**
+
+```bash
+git add db/migrations/006_rate_limits.sql src/lib/security/rateLimit.ts src/lib/security/__tests__/rateLimit.test.ts src/app/api/cron/cleanup/route.ts e2e/auth.spec.ts
+git commit -m "feat(security): shared rate limit store and token cleanup"
+```
