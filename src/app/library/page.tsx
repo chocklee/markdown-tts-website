@@ -40,6 +40,7 @@ export default function LibraryPage() {
   const [docs, setDocs] = useState<LibraryDocument[]>([])
   const [tab, setTab] = useState<Tab>('docs')
   const [quota, setQuota] = useState<{ usedBytes: number; quotaBytes: number } | null>(null)
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [notice, setNotice] = useState('')
@@ -79,6 +80,10 @@ export default function LibraryPage() {
 
   useEffect(() => {
     if (status !== 'authenticated') return
+    void fetch('/api/credits/balance')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setCreditsBalance(data?.creditsBalance ?? null))
+      .catch(() => {})
     void sync()
     const onOnline = () => void sync()
     window.addEventListener('online', onOnline)
@@ -136,6 +141,16 @@ export default function LibraryPage() {
             <span className="text-slate-500">
               已用 {formatBytes(usedBytes)} / {formatBytes(quota.quotaBytes)}
             </span>
+          )}
+          {status === 'authenticated' && creditsBalance !== null && (
+            <>
+              <Link href="/credits" className="text-slate-500 hover:text-slate-700">
+                积分 {creditsBalance}
+              </Link>
+              <Link href="/pricing" className="rounded-lg bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700">
+                购买积分
+              </Link>
+            </>
           )}
           <div className="flex overflow-hidden rounded-lg border border-slate-300">
             <button
