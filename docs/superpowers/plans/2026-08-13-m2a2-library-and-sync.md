@@ -816,16 +816,18 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ docI
 2. 从浏览器 DevTools 复制 cookie，或先用 Playwright 登录后调用：
 
 ```bash
+# 生成一个 docId（UUID）
+node -e "console.log(crypto.randomUUID())"
 # 上传一篇文档
-curl -X PUT http://localhost:3000/api/documents/test-doc-1 \
+curl -X PUT http://localhost:3000/api/documents/<uuid> \
   -H 'Content-Type: application/json' \
   -b <cookie> \
-  -d '{"docId":"test-doc-1","title":"测试","content":"# 你好","contentHash":"abc","fileSizeBytes":10,"updatedAt":1700000000000,"deletedAt":null,"deleteExpiresAt":null}'
+  -d '{"docId":"<uuid>","title":"测试","content":"# 你好","contentHash":"abc","fileSizeBytes":10,"updatedAt":1700000000000,"deletedAt":null,"deleteExpiresAt":null}'
 # 预期 {"ok":true}；再次 PUT 更旧的 updatedAt 应返回 409 conflict
 # 列出
 curl http://localhost:3000/api/documents -b <cookie>
 # 彻底删除
-curl -X DELETE http://localhost:3000/api/documents/test-doc-1 -b <cookie>
+curl -X DELETE http://localhost:3000/api/documents/<uuid> -b <cookie>
 ```
 
 - [ ] **Step 4: 提交**
