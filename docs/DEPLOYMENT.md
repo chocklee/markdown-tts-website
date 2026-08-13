@@ -49,8 +49,20 @@
 5. 删除 → 进回收站（两端）→ 恢复 → 彻底删除（两端消失）。
 6. 回收站过期清理可手动验证：把数据库里某行 `delete_expires_at` 改成过去时间，刷新 `/library` 后该行被清除。
 
+## 五·B、M2b 积分与支付验证清单
+
+1. 注册新账号 → `/api/credits/balance` 返回 `creditsBalance: 50`（注册赠送）
+2. Google 首次登录新邮箱 → 同样获得 50 积分（`events.createUser` 钩子）
+3. `/pricing` 展示三档套餐（$1.99 / $3.99 / $9.99）与当前余额
+4. Stripe 测试模式支付（4242 4242 4242 4242 测试卡）→ 回到 `/pricing?success=1`，余额增加、`/credits` 出现「购买体验包」流水、配额变为 1G
+5. Webhook 重复投递（`stripe trigger checkout.session.completed` 或重放事件）→ 不重复入账（幂等）
+6. 未购买账号打开阅读器设置 → 逐句模式显示锁定态；购买后显示开关与暂停时长（1–10 秒）
+7. 逐句模式开启后播放：每句播完暂停 N 秒自动继续；手动暂停时停止自动继续
+8. 本地联调 Webhook：`stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+
 ## 六、已知事项
 
 - **国内访问**：`*.vercel.app` 域名在中国大陆网络经常无法连接（部署本身正常）。需要国内稳定访问时，绑定自定义域名或换国内托管。
 - **Next.js 版本**：Vercel 会阻止部署存在已知漏洞的 Next.js 版本。本项目最低要求 15.5.23（CVE-2025-66478 修复版），升级用 `npm install next@15.5.23 eslint-config-next@15.5.23`。
 - **依赖审计**：部署前建议跑 `npm audit`（当前为 0 漏洞）。
+- **Stripe 上线**：测试密钥 `sk_test_...` 换 `sk_live_...`；Webhook 端点需在 Stripe 后台配置为 `https://你的域名/api/webhooks/stripe`，事件选 `checkout.session.completed`。
