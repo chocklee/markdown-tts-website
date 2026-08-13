@@ -1630,7 +1630,7 @@ git commit -m "feat(library): add library page with quota and actions"
 - Create: `src/app/api/cron/cleanup-trash/route.ts`
 - Create: `vercel.json`
 
-- [ ] **Step 1: 创建 `src/app/api/cron/cleanup-trash/route.ts`**
+- [x] **Step 1: 创建 `src/app/api/cron/cleanup-trash/route.ts`**
 
 ```ts
 import { NextResponse } from 'next/server'
@@ -1651,7 +1651,7 @@ export async function GET(req: Request) {
 }
 ```
 
-- [ ] **Step 2: 创建 `vercel.json`**
+- [x] **Step 2: 创建 `vercel.json`**
 
 ```json
 {
@@ -1664,11 +1664,11 @@ export async function GET(req: Request) {
 }
 ```
 
-- [ ] **Step 3: 设置环境变量**
+- [x] **Step 3: 设置环境变量**
 
 在 Vercel 项目设置中加入 `CRON_SECRET`（`openssl rand -base64 32`），Vercel 会自动以 `Authorization: Bearer <CRON_SECRET>` 调用 cron。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add src/app/api/cron/cleanup-trash/route.ts vercel.json
