@@ -10,14 +10,31 @@ function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
-    req.onupgradeneeded = () => {
+    req.onblocked = () => {
+      // Another connection is holding the DB open; wait for it to close.
+    }
+    req.onupgradeneeded = (event) => {
       const db = req.result
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: 'docId' })
+      switch (event.oldVersion) {
+        case 0:
+          db.createObjectStore(STORE, { keyPath: 'docId' })
+          break
+        default:
+          break
       }
     }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
+    req.onsuccess = () => {
+      const db = req.result
+      db.onversionchange = () => {
+        db.close()
+        dbPromise = null
+      }
+      resolve(db)
+    }
+    req.onerror = () => {
+      dbPromise = null
+      reject(req.error)
+    }
   })
   return dbPromise
 }
