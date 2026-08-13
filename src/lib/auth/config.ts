@@ -2,7 +2,9 @@ import type { NextAuthConfig } from 'next-auth'
 import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'
 import { pool } from '@/lib/db/pool'
-import { verifyPassword } from '@/lib/auth/password'
+import { hashPassword, verifyPassword } from '@/lib/auth/password'
+
+const DUMMY_HASH = hashPassword('timing-equalizer-dummy')
 
 export const authConfig = {
   session: { strategy: 'jwt' },
@@ -26,18 +28,24 @@ export const authConfig = {
         const email = typeof credentials?.email === 'string' ? credentials.email.trim().toLowerCase() : ''
         const password = typeof credentials?.password === 'string' ? credentials.password : ''
         if (!email || !password) return null
-        const { rows } = await pool.query<{
-          id: string
-          name: string | null
-          email: string
-          password_hash: string | null
-          emailVerified: Date | null
-        }>(
-          'SELECT id, name, email, password_hash, "emailVerified" FROM users WHERE email = $1',
-          [email],
-        )
-        const user = rows[0]
-        if (!user || !user.password_hash || !user.emailVerified) return null
+        let user: { id: string; name: string | null; email: string; password_hash: string | null; emailVerified: Date | null } | undefined
+        try {
+          const { rows } = await pool.query<{
+            id: string
+            name: string | null
+            email: string
+            password_hash: string | null
+            emailVerified: Date | null
+          }>('SELECT id, name, email, password_hash, "emailVerified" FROM users WHERE lower(email) = lower($1)', [email])
+          user = rows[0]
+        } catch (err) {
+          console.error('authorize query failed', err)
+          return null
+        }
+        if (!user || !user.password_hash || !user.emailVerified) {
+          verifyPassword(password, DUMMY_HASH)
+          return null
+        }
         if (!verifyPassword(password, user.password_hash)) return null
         return { id: user.id, name: user.name, email: user.email }
       },
@@ -49,7 +57,7 @@ export const authConfig = {
       return token
     },
     session({ session, token }) {
-      if (token.uid) session.user.id = token.uid as string
+      if (typeof token.uid === 'string') session.user.id = token.uid
       return session
     },
   },
