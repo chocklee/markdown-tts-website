@@ -210,7 +210,7 @@ git commit -m "feat(library): add IndexedDB document store"
 - Test: `src/lib/library/__tests__/actions.test.ts`
 - Modify: `src/lib/storage/local.ts`
 
-- [ ] **Step 1: 写失败测试 `src/lib/library/__tests__/actions.test.ts`**
+^- [x] **Step 1: 写失败测试 `src/lib/library/__tests__/actions.test.ts`**
 
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -303,12 +303,12 @@ describe('文档操作层', () => {
 })
 ```
 
-- [ ] **Step 2: 运行确认失败**
+^- [x] **Step 2: 运行确认失败**
 
 Run: `npx vitest run src/lib/library/__tests__/actions.test.ts`
 Expected: FAIL（模块不存在）
 
-- [ ] **Step 3: 修改 `src/lib/storage/local.ts`（保留位置记忆，单文档读写改为迁移专用）**
+^- [x] **Step 3: 修改 `src/lib/storage/local.ts`（保留位置记忆，单文档读写改为迁移专用）**
 
 ```ts
 export interface LegacyStoredDocument {
@@ -355,7 +355,7 @@ export function clearPosition(): void {
 }
 ```
 
-- [ ] **Step 4: 更新 `src/lib/storage/__tests__/local.test.ts`（移除旧单文档读写用例）**
+^- [x] **Step 4: 更新 `src/lib/storage/__tests__/local.test.ts`（移除旧单文档读写用例）**
 
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -402,7 +402,7 @@ describe('位置记忆', () => {
 })
 ```
 
-- [ ] **Step 5: 实现 `src/lib/library/actions.ts`**
+^- [x] **Step 5: 实现 `src/lib/library/actions.ts`**
 
 ```ts
 import type { LibraryDocument } from '@/types/document'
@@ -505,12 +505,12 @@ export function activeBytes(docs: Pick<LibraryDocument, 'deletedAt' | 'fileSizeB
 }
 ```
 
-- [ ] **Step 6: 运行全部测试确认通过**
+^- [x] **Step 6: 运行全部测试确认通过**
 
 Run: `npm run test`
 Expected: 通过（原 82 个用例中 local.test.ts 已更新；新增 actions/library 用例）
 
-- [ ] **Step 7: 提交**
+^- [x] **Step 7: 提交**
 
 ```bash
 git add src/lib/library/actions.ts src/lib/library/__tests__/actions.test.ts src/lib/storage/local.ts src/lib/storage/__tests__/local.test.ts
