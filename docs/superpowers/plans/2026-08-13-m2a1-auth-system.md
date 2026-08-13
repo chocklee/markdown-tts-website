@@ -1515,12 +1515,12 @@ git commit -m "feat(auth): add forgot and reset password flows"
 
 ### Task 9: 全量验证与验收清单
 
-- [ ] **Step 1: 自动化检查**
+^- [x] **Step 1: 自动化检查**
 
 Run: `npm run test && npx tsc --noEmit && npm run lint && npm run build`
 Expected: 全部通过（测试含既有 82 个 + 新增用例；build 无报错）
 
-- [ ] **Step 2: 端到端验收（Playwright / 手动）**
+^- [x] **Step 2: 端到端验收（Playwright / 手动）**
 
 1. 注册 → 数据库取 token → 验证邮箱 → 登录成功 → Header 显示邮箱
 2. 未验证邮箱登录被拒
@@ -1530,7 +1530,7 @@ Expected: 全部通过（测试含既有 82 个 + 新增用例；build 无报错
 6. 刷新页面会话保持（httpOnly Cookie）
 7. 退出登录后回到首页，Header 恢复「登录 / 注册」状态（业务接口鉴权由下一计划 M2a-2 的文档 API 覆盖）
 
-- [ ] **Step 3: 推送**
+^- [x] **Step 3: 推送**
 
 ```bash
 git push origin master
