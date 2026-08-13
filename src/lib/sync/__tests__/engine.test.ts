@@ -72,3 +72,30 @@ describe('computeSyncPlan', () => {
     expect(plan.downloads[0].deletedAt).toBe(300)
   })
 })
+
+  it('本地删除（deletedAt 已设且 updatedAt 更大）→ 上传且 uploads[0].deletedAt 不为 null', () => {
+    const plan = computeSyncPlan(
+      [localDoc('a', 300, { deletedAt: 300, deleteExpiresAt: 3300000000000 })],
+      [remoteDoc('a', 200)],
+    )
+    expect(plan.uploads.map((d) => d.docId)).toEqual(['a'])
+    expect(plan.uploads[0].deletedAt).toBe(300)
+  })
+
+  it('两端都已删除且本地更新 → 上传最新删除状态', () => {
+    const plan = computeSyncPlan(
+      [localDoc('a', 300, { deletedAt: 300, deleteExpiresAt: 3300000000000 })],
+      [remoteDoc('a', 200, { deletedAt: 200, deleteExpiresAt: 3200000000000 })],
+    )
+    expect(plan.uploads.map((d) => d.docId)).toEqual(['a'])
+    expect(plan.uploads[0].deletedAt).toBe(300)
+  })
+
+  it('两端删除时间相同 → 无操作', () => {
+    const plan = computeSyncPlan(
+      [localDoc('a', 300, { deletedAt: 300, deleteExpiresAt: 3300000000000 })],
+      [remoteDoc('a', 300, { deletedAt: 300, deleteExpiresAt: 3300000000000 })],
+    )
+    expect(plan.uploads).toEqual([])
+    expect(plan.downloads).toEqual([])
+  })

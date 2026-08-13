@@ -18,6 +18,7 @@ export function computeSyncPlan(local: LibraryDocument[], remote: SyncedDocument
       uploads.push(localDoc)
       continue
     }
+    // 相同 updatedAt 视为无冲突（客户端每次保存都会递增 updatedAt，正常不会出现同时间戳不同内容；服务端 `<=` 守卫把等时间戳重试视为幂等，因此这里无需按 contentHash 再分胜负）
     if (localDoc.dirty || localDoc.updatedAt > remoteDoc.updatedAt) {
       uploads.push(localDoc)
     } else if (remoteDoc.updatedAt > localDoc.updatedAt) {
