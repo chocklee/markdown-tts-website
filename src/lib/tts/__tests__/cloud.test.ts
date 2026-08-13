@@ -194,6 +194,63 @@ describe('CloudTtsEngine', () => {
     expect(audio.play).toHaveBeenCalledTimes(2)
   })
 
+  it('fetch 在途时 cancel，响应到达后不创建不播放音频', async () => {
+    mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    const onend = vi.fn()
+    const onerror = vi.fn()
+    engine.speak('你好', { rate: 1, volume: 1, onend, onerror })
+
+    engine.cancel()
+    await flush()
+
+    expect(MockAudio.instances).toHaveLength(0)
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(engine.isSpeaking).toBe(false)
+    expect(onend).not.toHaveBeenCalled()
+    expect(onerror).not.toHaveBeenCalled()
+  })
+
+  it('fetch 在途时 pause，响应到达后音频不开始播放，resume 后恢复', async () => {
+    mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    const onend = vi.fn()
+    const onerror = vi.fn()
+    engine.speak('你好', { rate: 1, volume: 1, onend, onerror })
+
+    engine.pause()
+    await flush()
+
+    expect(MockAudio.instances).toHaveLength(1)
+    const audio = MockAudio.instances[0]
+    expect(audio.play).not.toHaveBeenCalled()
+    expect(audio.paused).toBe(true)
+    expect(engine.isSpeaking).toBe(false)
+    expect(onend).not.toHaveBeenCalled()
+
+    engine.resume()
+    expect(audio.play).toHaveBeenCalledOnce()
+    expect(engine.isSpeaking).toBe(true)
+  })
+
+  it('resume 时 play 失败触发 onerror', async () => {
+    mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
+    const engine = new CloudTtsEngine('nova')
+    const onend = vi.fn()
+    const onerror = vi.fn()
+    engine.speak('你好', { rate: 1, volume: 1, onend, onerror })
+    await flush()
+    const audio = MockAudio.instances[0]
+
+    audio.play.mockRejectedValueOnce(new Error('resume play failed'))
+    engine.resume()
+    await flush()
+
+    expect(onerror).toHaveBeenCalledTimes(1)
+    expect((onerror.mock.calls[0][0] as Error).message).toBe('语音合成失败')
+    expect(onend).not.toHaveBeenCalled()
+  })
+
   it('音频 error 事件触发 onerror', async () => {
     mockFetchResolved(200, { audio: BASE64_AUDIO, contentType: 'audio/mpeg' })
     const engine = new CloudTtsEngine('nova')

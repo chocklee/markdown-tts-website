@@ -18,6 +18,7 @@ export class CloudTtsEngine implements TtsEngine {
   private voice: string
   private audio: HTMLAudioElement | null = null
   private objectUrl: string | null = null
+  private paused = false
   private epoch = 0
 
   constructor(voice: string) {
@@ -25,9 +26,8 @@ export class CloudTtsEngine implements TtsEngine {
   }
 
   speak(text: string, options: SpeakOptions): void {
-    const epoch = this.epoch + 1
-    this.epoch = epoch
     this.cancel()
+    const epoch = this.epoch
 
     fetch('/api/tts/synthesize', {
       method: 'POST',
@@ -45,7 +45,6 @@ export class CloudTtsEngine implements TtsEngine {
       })
       .then((data) => {
         if (epoch !== this.epoch) return
-        this.cancel()
         const blob = new Blob([base64ToBytes(data.audio)], { type: data.contentType })
         const url = URL.createObjectURL(blob)
         const audio = new Audio(url)
@@ -54,6 +53,7 @@ export class CloudTtsEngine implements TtsEngine {
         audio.volume = options.volume
         audio.onended = () => options.onend()
         audio.onerror = () => options.onerror(new Error('语音合成失败'))
+        if (this.paused) return
         audio.play().catch((error) => options.onerror(error))
       })
       .catch((error) => {
@@ -63,14 +63,19 @@ export class CloudTtsEngine implements TtsEngine {
   }
 
   pause(): void {
+    this.paused = true
     this.audio?.pause()
   }
 
   resume(): void {
-    this.audio?.play()
+    this.paused = false
+    const audio = this.audio
+    audio?.play().catch(() => audio.onerror?.(new Event('error')))
   }
 
   cancel(): void {
+    this.epoch += 1
+    this.paused = false
     if (this.audio) {
       this.audio.pause()
       this.audio = null
