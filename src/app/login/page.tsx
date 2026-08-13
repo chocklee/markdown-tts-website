@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [resendSent, setResendSent] = useState(false)
+  const [resendError, setResendError] = useState('')
   const [hasGoogle, setHasGoogle] = useState(false)
 
   useEffect(() => {
@@ -22,23 +23,33 @@ export default function LoginPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    const res = await signIn('credentials', { redirect: false, email, password })
-    if (res?.error) {
-      setError('邮箱或密码错误；未验证的邮箱请先完成邮件验证')
-      return
+    try {
+      const res = await signIn('credentials', { redirect: false, email, password })
+      if (res?.error) {
+        setError('邮箱或密码错误；未验证的邮箱请先完成邮件验证')
+        return
+      }
+      router.push('/')
+      router.refresh()
+    } catch {
+      setError('网络错误，请重试')
     }
-    router.push('/')
-    router.refresh()
   }
 
   async function resend() {
     setError('')
-    const res = await fetch('/api/auth/resend-verification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    if (res.ok) setResendSent(true)
+    setResendError('')
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (res.ok) setResendSent(true)
+      else setResendError('发送失败，请稍后再试')
+    } catch {
+      setResendError('发送失败，请稍后再试')
+    }
   }
 
   return (
@@ -53,6 +64,7 @@ export default function LoginPage() {
             id="email"
             type="email"
             required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-blue-400"
@@ -66,12 +78,17 @@ export default function LoginPage() {
             id="password"
             type="password"
             required
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-blue-400"
           />
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
         <button type="submit" className="w-full rounded-lg bg-blue-600 py-2.5 text-white hover:bg-blue-700">
           登录
         </button>
@@ -88,13 +105,21 @@ export default function LoginPage() {
       </div>
 
       {error && (
-        <button
-          type="button"
-          onClick={() => void resend()}
-          className="mt-4 w-full rounded-lg border border-slate-300 py-2.5 text-sm text-slate-600 hover:bg-slate-100"
-        >
-          {resendSent ? '已重新发送验证邮件' : '未收到验证邮件？重新发送'}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => void resend()}
+            disabled={resendSent}
+            className="mt-4 w-full rounded-lg border border-slate-300 py-2.5 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            {resendSent ? '已重新发送验证邮件' : '未收到验证邮件？重新发送'}
+          </button>
+          {resendError && (
+            <p role="alert" className="mt-2 text-center text-sm text-red-600">
+              {resendError}
+            </p>
+          )}
+        </>
       )}
 
       {hasGoogle && (
