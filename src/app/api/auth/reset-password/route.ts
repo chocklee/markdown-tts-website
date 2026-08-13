@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     }
     if (new Date(rows[0].expires_at).getTime() < Date.now()) {
       await client.query('DELETE FROM password_resets WHERE token = $1', [token])
-      await client.query('ROLLBACK')
+      await client.query('COMMIT')
       return NextResponse.json({ error: '重置链接已过期' }, { status: 400 })
     }
     await client.query('UPDATE users SET password_hash = $1 WHERE email = $2', [hashPassword(password), rows[0].email])
