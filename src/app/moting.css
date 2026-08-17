@@ -741,33 +741,32 @@
       transition: opacity 200ms ease;
     }
     .backdrop.show { opacity: 1; pointer-events: auto; }
-    .sheet {
+    .drawer {
       position: fixed;
-      left: 50%;
+      top: 0;
+      right: 0;
       bottom: 0;
-      transform: translate(-50%, 105%);
-      width: min(520px, 100%);
+      transform: translateX(105%);
+      width: min(400px, 92vw);
       z-index: 61;
       background: var(--surface);
-      border-radius: 24px 24px 0 0;
-      box-shadow: 0 -16px 40px -20px rgba(0,0,0,0.35);
-      max-height: 68vh;
+      border-left: 1px solid var(--border);
+      box-shadow: -16px 0 40px -20px rgba(0,0,0,0.35);
       display: flex;
       flex-direction: column;
       transition: transform 240ms ease;
     }
-    .sheet.open { transform: translate(-50%, 0); }
-    .sheet .handle { width: 36px; height: 4px; border-radius: 999px; background: var(--border); margin: 10px auto 0; }
-    .sheet-head {
+    .drawer.open { transform: translateX(0); }
+    .drawer-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 12px 20px 10px;
+      padding: 14px 20px 10px;
       border-bottom: 1px solid var(--border);
     }
-    .sheet-head h2 { font-family: var(--font-display); font-size: var(--fs-h2); letter-spacing: -0.015em; margin: 0; }
-    .sheet-body { overflow-y: auto; padding: 6px 20px 30px; }
+    .drawer-head h2 { font-family: var(--font-display); font-size: var(--fs-h2); letter-spacing: -0.015em; margin: 0; }
+    .drawer-body { overflow-y: auto; padding: 6px 20px 30px; }
     .option-row {
       display: flex;
       align-items: center;
@@ -969,7 +968,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .spinner { animation: none; }
-      .view, .sheet, .modal-overlay, .toast, .switch, .switch::after { transition: none; animation: none; }
+      .view, .drawer, .modal-overlay, .toast, .switch, .switch::after { transition: none; animation: none; }
     }
 
     /* ─── 响应式断点 ───────────────────────────────────────────── */
@@ -1179,7 +1178,7 @@ input[type="checkbox"].switch:disabled { opacity: 0.55; cursor: default; }
 .link { color: var(--accent-strong); font-weight: 500; }
 
 /* 底部抽屉在关闭时完全隐藏 */
-.sheet[hidden] { display: none; }
+.drawer[hidden] { display: none; }
 
 /* ─── 登录 / 注册（认证页） ─────────────────────────────────── */
 .auth-shell {

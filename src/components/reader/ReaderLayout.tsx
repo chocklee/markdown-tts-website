@@ -8,19 +8,19 @@ import { ContentView } from './ContentView'
 import { SettingsPanel } from './SettingsPanel'
 import { QaPanel } from './QaPanel'
 import { PlaybackBar } from './PlaybackBar'
-import { BottomSheet } from './BottomSheet'
+import { SideDrawer } from './SideDrawer'
 import { IconBack, IconOutline, IconSettings, IconChat } from '@/components/app/icons'
 
-type SheetKind = 'outline' | 'settings' | 'qa' | null
+type DrawerKind = 'outline' | 'settings' | 'qa' | null
 
-const SHEET_TITLES: Record<Exclude<SheetKind, null>, string> = {
+const DRAWER_TITLES: Record<Exclude<DrawerKind, null>, string> = {
   outline: '大纲',
   settings: '朗读设置',
   qa: '文档问答',
 }
 
 export function ReaderLayout({ document }: { document: ReaderDocument }) {
-  const [sheet, setSheet] = useState<SheetKind>(null)
+  const [drawer, setDrawer] = useState<DrawerKind>(null)
   const { creditsBalance } = useAccount()
 
   return (
@@ -38,15 +38,15 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
             积分
           </span>
           <div className="rt-actions">
-            <button type="button" className="rt-btn" onClick={() => setSheet('outline')} aria-label="大纲">
+            <button type="button" className="rt-btn" onClick={() => setDrawer('outline')} aria-label="大纲">
               <IconOutline />
               大纲
             </button>
-            <button type="button" className="rt-btn" onClick={() => setSheet('settings')} aria-label="朗读设置">
+            <button type="button" className="rt-btn" onClick={() => setDrawer('settings')} aria-label="朗读设置">
               <IconSettings />
               朗读设置
             </button>
-            <button type="button" className="rt-btn" onClick={() => setSheet('qa')} aria-label="文档问答">
+            <button type="button" className="rt-btn" onClick={() => setDrawer('qa')} aria-label="文档问答">
               <IconChat />
               文档问答
             </button>
@@ -66,11 +66,11 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
 
       <PlaybackBar />
 
-      <BottomSheet open={sheet !== null} title={sheet ? SHEET_TITLES[sheet] : ''} onClose={() => setSheet(null)}>
-        {sheet === 'outline' && <OutlinePanel document={document} />}
-        {sheet === 'settings' && <SettingsPanel onClose={() => setSheet(null)} />}
-        {sheet === 'qa' && <QaPanel />}
-      </BottomSheet>
+      <SideDrawer open={drawer !== null} title={drawer ? DRAWER_TITLES[drawer] : ''} onClose={() => setDrawer(null)}>
+        {drawer === 'outline' && <OutlinePanel document={document} />}
+        {drawer === 'settings' && <SettingsPanel onClose={() => setDrawer(null)} />}
+        {drawer === 'qa' && <QaPanel />}
+      </SideDrawer>
     </>
   )
 }
