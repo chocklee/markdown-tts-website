@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { findPackage, createCheckoutSession, verifyWebhookSignature } from '../stripe'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { findPackage, createCheckoutSession, verifyWebhookSignature, getStripePriceId } from '../stripe'
 
 describe('findPackage', () => {
   it('按 id 找到套餐', () => {
@@ -12,15 +12,36 @@ describe('findPackage', () => {
   })
 })
 
+describe('getStripePriceId', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('从环境变量读取套餐价格 ID', () => {
+    vi.stubEnv('STRIPE_PRICE_STARTER', 'price_1_test')
+    expect(getStripePriceId('starter')).toBe('price_1_test')
+  })
+
+  it('未配置时抛错', () => {
+    vi.stubEnv('STRIPE_PRICE_STARTER', '')
+    expect(() => getStripePriceId('starter')).toThrow('STRIPE_PRICE_STARTER is not set')
+  })
+})
+
 describe('createCheckoutSession', () => {
-  it('写入 metadata.userId 与 packageId，mode=payment', async () => {
+  beforeEach(() => {
+    vi.stubEnv('STRIPE_PRICE_STARTER', 'price_1_test')
+  })
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('写入 metadata.userId 与 packageId，mode=subscription', async () => {
     const mockSessionsCreate = vi.fn().mockResolvedValue({ id: 'cs_1', url: 'https://checkout.stripe.com/c/1' })
     const client = { checkout: { sessions: { create: mockSessionsCreate } } }
     await createCheckoutSession('u1', 'starter', 'https://app.example.com', client as never)
     expect(mockSessionsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        mode: 'payment',
-        metadata: expect.objectContaining({ userId: 'u1', packageId: 'starter', credits: '200' }),
+        mode: 'subscription',
+        line_items: [{ price: 'price_1_test', quantity: 1 }],
+        subscription_data: expect.objectContaining({ metadata: expect.objectContaining({ userId: 'u1', packageId: 'starter' }) }),
+        metadata: expect.objectContaining({ userId: 'u1', packageId: 'starter' }),
         success_url: 'https://app.example.com?success=1&session_id={CHECKOUT_SESSION_ID}',
         cancel_url: 'https://app.example.com?cancel=1',
       }),

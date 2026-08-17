@@ -11,6 +11,13 @@ export function getStripe(): Stripe {
   return new Stripe(key)
 }
 
+export function getStripePriceId(planId: string): string {
+  const envKey = `STRIPE_PRICE_${planId.toUpperCase()}`
+  const priceId = process.env[envKey]
+  if (!priceId) throw new Error(`${envKey} is not set`)
+  return priceId
+}
+
 export async function createCheckoutSession(
   userId: string,
   packageId: string,
@@ -20,21 +27,34 @@ export async function createCheckoutSession(
   const pkg = findPackage(packageId)
   if (!pkg) throw new Error('unknown package')
   return client.checkout.sessions.create({
-    mode: 'payment',
+    mode: 'subscription',
     line_items: [
       {
-        price_data: {
-          currency: 'usd',
-          product_data: { name: `${pkg.name}（${pkg.credits} 积分）` },
-          unit_amount: Math.round(pkg.usd * 100),
-        },
+        price: getStripePriceId(pkg.id),
         quantity: 1,
       },
     ],
-    metadata: { userId, packageId, credits: String(pkg.credits) },
+    subscription_data: {
+      metadata: { userId, packageId },
+    },
+    metadata: { userId, packageId },
     success_url: `${appUrl}?success=1&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}?cancel=1`,
   })
+}
+
+export async function cancelSubscription(
+  subscriptionId: string,
+  client: Pick<Stripe, 'subscriptions'> = getStripe(),
+): Promise<void> {
+  await client.subscriptions.cancel(subscriptionId)
+}
+
+export async function retrieveSubscription(
+  subscriptionId: string,
+  client: Pick<Stripe, 'subscriptions'> = getStripe(),
+): Promise<Stripe.Subscription> {
+  return client.subscriptions.retrieve(subscriptionId)
 }
 
 export function verifyWebhookSignature(

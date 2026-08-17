@@ -1,6 +1,6 @@
 import { pool } from '@/lib/db/pool'
 import type { PoolClient } from 'pg'
-import { CONFIG } from '@/lib/config'
+import { CREDIT_PACKAGES, CONFIG } from '@/lib/config'
 
 export function canDeduct(balance: bigint, amount: bigint): boolean {
   return balance >= amount
@@ -70,14 +70,6 @@ export async function getCreditsBalance(userId: string): Promise<number> {
     [userId],
   )
   return Number(rows[0]?.credits_balance ?? 0)
-}
-
-export async function isPurchased(userId: string): Promise<boolean> {
-  const { rowCount } = await pool.query(
-    "SELECT 1 FROM credit_transactions WHERE user_id = $1 AND kind = 'purchase' LIMIT 1",
-    [userId],
-  )
-  return (rowCount ?? 0) > 0
 }
 
 export async function listTransactions(
@@ -231,4 +223,150 @@ export async function refundCredits(
   } finally {
     client.release()
   }
+}
+
+export interface SubscriptionInfo {
+  planId: string | null
+  status: string
+  periodEnd: string | null
+}
+
+export async function getSubscription(userId: string): Promise<SubscriptionInfo> {
+  const { rows } = await pool.query<{
+    subscription_plan_id: string | null
+    subscription_status: string
+    subscription_period_end: string | null
+  }>(
+    'SELECT subscription_plan_id, subscription_status, subscription_period_end FROM users WHERE id = $1',
+    [userId],
+  )
+  return {
+    planId: rows[0]?.subscription_plan_id ?? null,
+    status: rows[0]?.subscription_status ?? 'none',
+    periodEnd: rows[0]?.subscription_period_end ?? null,
+  }
+}
+
+export async function hasActiveSubscription(userId: string): Promise<boolean> {
+  const { rowCount } = await pool.query(
+    "SELECT 1 FROM users WHERE id = $1 AND subscription_status = 'active'",
+    [userId],
+  )
+  return (rowCount ?? 0) > 0
+}
+
+export async function getActiveStripeSubscriptionId(userId: string): Promise<string | null> {
+  const { rows } = await pool.query<{ stripe_subscription_id: string | null }>(
+    "SELECT stripe_subscription_id FROM users WHERE id = $1 AND subscription_status = 'active'",
+    [userId],
+  )
+  return rows[0]?.stripe_subscription_id ?? null
+}
+
+export async function recordSubscriptionCustomer(
+  userId: string,
+  customerId: string,
+  subscriptionId: string,
+): Promise<void> {
+  await pool.query(
+    'UPDATE users SET stripe_customer_id = $1, stripe_subscription_id = $2 WHERE id = $3',
+    [customerId, subscriptionId, userId],
+  )
+}
+
+export async function subscriptionGrant(
+  userId: string,
+  planId: string,
+  credits: number,
+  subscriptionId: string,
+  customerId: string | null,
+  periodEndIso: string,
+  meta: unknown,
+): Promise<void> {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const { rows } = await client.query<{ credits_balance: string }>(
+      'SELECT credits_balance FROM users WHERE id = $1 FOR UPDATE',
+      [userId],
+    )
+    const currentBalance = Number(rows[0]?.credits_balance ?? 0)
+    if (currentBalance > 0) {
+      await client.query(
+        "INSERT INTO credit_transactions (user_id, amount, kind, ref, description, meta) VALUES ($1, $2, 'subscription_reset', $3, '上期积分到期清零', $4)",
+        [userId, -currentBalance, subscriptionId, JSON.stringify(meta)],
+      )
+    }
+    await client.query(
+      "INSERT INTO credit_transactions (user_id, amount, kind, ref, description, meta) VALUES ($1, $2, 'subscription_grant', $3, $4, $5)",
+      [userId, credits, subscriptionId, `订阅${findPackageName(planId)} · 本月积分`, JSON.stringify(meta)],
+    )
+    await client.query(
+      `UPDATE users SET
+         credits_balance = $1,
+         storage_quota_bytes = GREATEST(storage_quota_bytes, $2),
+         stripe_subscription_id = $3,
+         subscription_plan_id = $4,
+         subscription_status = 'active',
+         subscription_period_end = $5
+       WHERE id = $6`,
+      [credits, CONFIG.quota.paidBytes, subscriptionId, planId, periodEndIso, userId],
+    )
+    if (customerId) {
+      await client.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [customerId, userId])
+    }
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+export async function subscriptionExpired(
+  userId: string,
+  subscriptionId: string,
+  meta: unknown,
+): Promise<void> {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const { rows } = await client.query<{ credits_balance: string; stripe_subscription_id: string | null }>(
+      'SELECT credits_balance, stripe_subscription_id FROM users WHERE id = $1 FOR UPDATE',
+      [userId],
+    )
+    if (!rows[0] || rows[0].stripe_subscription_id !== subscriptionId) {
+      await client.query('ROLLBACK')
+      return
+    }
+    const currentBalance = Number(rows[0].credits_balance ?? 0)
+    if (currentBalance > 0) {
+      await client.query(
+        "INSERT INTO credit_transactions (user_id, amount, kind, ref, description, meta) VALUES ($1, $2, 'subscription_reset', $3, '订阅到期，积分清零', $4)",
+        [userId, -currentBalance, subscriptionId, JSON.stringify(meta)],
+      )
+    }
+    await client.query(
+      `UPDATE users SET
+         credits_balance = 0,
+         storage_quota_bytes = $1,
+         stripe_subscription_id = NULL,
+         subscription_plan_id = NULL,
+         subscription_status = 'none',
+         subscription_period_end = NULL
+       WHERE id = $2`,
+      [CONFIG.quota.freeBytes, userId],
+    )
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+function findPackageName(planId: string): string {
+  return CREDIT_PACKAGES.find((p) => p.id === planId)?.name ?? planId
 }

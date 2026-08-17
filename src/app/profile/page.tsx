@@ -16,6 +16,7 @@ interface PackageInfo {
   name: string
   usd: number
   credits: number
+  billing?: string
 }
 
 interface Transaction {
@@ -26,10 +27,17 @@ interface Transaction {
   createdAt: string
 }
 
+interface SubscriptionInfo {
+  planId: string | null
+  status: string
+  periodEnd: string | null
+}
+
 interface BalanceInfo {
   creditsBalance: number | null
   quotaBytes: number | null
   purchased: boolean
+  subscription: SubscriptionInfo | null
 }
 
 function formatBytes(n: number): string {
@@ -74,7 +82,7 @@ function ProfileContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const showToast = useUiStore((s) => s.showToast)
-  const [balance, setBalance] = useState<BalanceInfo>({ creditsBalance: null, quotaBytes: null, purchased: false })
+  const [balance, setBalance] = useState<BalanceInfo>({ creditsBalance: null, quotaBytes: null, purchased: false, subscription: null })
   const [packages, setPackages] = useState<PackageInfo[]>([])
   const [items, setItems] = useState<Transaction[]>([])
   const [cacheBytes, setCacheBytes] = useState(0)
@@ -90,11 +98,17 @@ function ProfileContent() {
     try {
       const res = await fetch('/api/credits/balance')
       if (!res.ok) return
-      const data = (await res.json()) as { creditsBalance?: number; quotaBytes?: number; purchased?: boolean }
+      const data = (await res.json()) as {
+        creditsBalance?: number
+        quotaBytes?: number
+        purchased?: boolean
+        subscription?: SubscriptionInfo | null
+      }
       setBalance({
         creditsBalance: typeof data.creditsBalance === 'number' ? data.creditsBalance : null,
         quotaBytes: typeof data.quotaBytes === 'number' ? data.quotaBytes : null,
         purchased: Boolean(data.purchased),
+        subscription: data.subscription ?? null,
       })
     } catch {
       // 忽略
@@ -116,7 +130,7 @@ function ProfileContent() {
   }, [status, refreshBalance])
 
   useEffect(() => {
-    if (searchParams.get('success')) showToast('支付成功，积分已到账！')
+    if (searchParams.get('success')) showToast('订阅成功，本月积分已到账！')
     else if (searchParams.get('cancel')) showToast('已取消支付')
     if (searchParams.get('success') || searchParams.get('cancel')) {
       void refreshBalance()
@@ -196,6 +210,13 @@ function ProfileContent() {
                   <span className="unit">积分</span>
                 </p>
                 <p className="hint">可用于兑换云端音色与长文档朗读</p>
+                {balance.subscription?.status === 'active' ? (
+                  <p className="meta" style={{ marginTop: 8 }}>
+                    订阅中 · 下次续费 {balance.subscription.periodEnd ? formatDate(balance.subscription.periodEnd) : ''}，剩余积分到期清零
+                  </p>
+                ) : (
+                  <p className="meta" style={{ marginTop: 8 }}>未订阅 · 注册即送 50 积分</p>
+                )}
                 <button
                   type="button"
                   className="btn-primary"
@@ -205,7 +226,7 @@ function ProfileContent() {
                     else router.push('/#pricing')
                   }}
                 >
-                  充值
+                  {balance.subscription?.status === 'active' ? '切换套餐' : '订阅套餐'}
                 </button>
               </div>
             </div>
@@ -214,16 +235,16 @@ function ProfileContent() {
               <div className="card">
                 <div className="sec-head">
                   <h2 className="h2" style={{ fontSize: 18 }}>
-                    购买积分
+                    订阅套餐
                   </h2>
-                  <p className="meta">在线支付</p>
+                  <p className="meta">包月 · 到期清零</p>
                 </div>
                 {packages.map((pkg) => (
                   <button key={pkg.id} type="button" className="row-item" onClick={() => openBuy(pkg)}>
                     <div className="body">
                       <div className="title">
                         {pkg.name}
-                        <span className="tag-inline">{pkg.credits} 积分</span>
+                        <span className="tag-inline">{pkg.credits} 积分/月</span>
                         {pkg.id === 'light' && <span className="tag-inline">最受欢迎</span>}
                         {pkg.id === 'unlimited' && <span className="tag-inline">超值</span>}
                       </div>
@@ -233,7 +254,7 @@ function ProfileContent() {
                         {pkg.id === 'unlimited' && '单位积分最划算，适合深度用户'}
                       </div>
                     </div>
-                    <span className="price">${pkg.usd.toFixed(2)}</span>
+                    <span className="price">${pkg.usd.toFixed(2)}<span className="unit" style={{ fontSize: 12, color: 'var(--muted)' }}>/月</span></span>
                     <IconChevron className="chev" />
                   </button>
                 ))}
@@ -291,7 +312,7 @@ function ProfileContent() {
               <div className="row-item">
                 <div className="body">
                   <div className="title">云存储</div>
-                  <div className="sub">文档自动同步，购买套餐后升级</div>
+                  <div className="sub">文档自动同步，订阅套餐后升级 1G</div>
                 </div>
                 <span className="val">已用 {formatBytes(usedBytes ?? 0)} / {formatBytes(balance.quotaBytes)}</span>
               </div>
@@ -328,16 +349,16 @@ function ProfileContent() {
       {selected && (
         <div className="modal-overlay show">
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
-            <h3 id="m-title">购买积分</h3>
+            <h3 id="m-title">订阅套餐</h3>
             <p className="m-sub">{selected.name}</p>
-            <p className="m-price num">${selected.usd.toFixed(2)}</p>
-            <p className="m-note">{selected.credits} 积分 · 支付成功后即时到账</p>
+            <p className="m-price num">${selected.usd.toFixed(2)}<span className="unit" style={{ fontSize: 14, color: 'var(--muted)' }}>/月</span></p>
+            <p className="m-note">{selected.credits} 积分/月 · 每月自动续费 · 剩余积分到期清零</p>
             <div className="m-actions">
               <button type="button" className="btn-secondary" onClick={() => setSelected(null)} disabled={busy}>
                 取消
               </button>
               <button type="button" className="btn-primary" onClick={() => void confirmBuy()} disabled={busy}>
-                {busy ? '处理中…' : '确认支付'}
+                {busy ? '处理中…' : '确认订阅'}
               </button>
             </div>
           </div>

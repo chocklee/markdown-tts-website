@@ -40,14 +40,19 @@ const FREE_PLAN = {
 const PAID_PLANS = CREDIT_PACKAGES.map((pkg) => ({
   id: pkg.id,
   kicker: pkg.name,
-  title: `${pkg.credits} 积分`,
+  title: `${pkg.credits} 积分 / 月`,
   price: `$${pkg.usd}`,
-  unit: 'USD',
-  items: [`AI 音色朗读 · ${formatReadChars(pkg.credits)}`, '讲解 / 逐句 / 多语言收听', '存储配额升级 1G（永久）'],
+  unit: 'USD / 月',
+  items: [
+    `AI 音色朗读 · ${formatReadChars(pkg.credits)}`,
+    '讲解 / 逐句 / 多语言收听',
+    '存储配额升级 1G（订阅期内）',
+    '每月自动续费，剩余积分到期清零',
+  ],
 }))
 
 const FAQ = [
-  { q: '怎么收费？', a: '注册即送 50 积分。AI 朗读与 Pro 功能按字数消耗积分，浏览器自带语音免费使用、不扣积分；积分包可在首页直接购买：体验包 $1.99 / 200 积分，轻量包 $3.99 / 800 积分，畅听包 $9.99 / 2200 积分，购买任意套餐存储配额升级 1G。' },
+  { q: '怎么收费？', a: '注册即送 50 积分。AI 朗读与 Pro 功能按字数消耗积分，浏览器自带语音免费使用、不扣积分；积分采用包月订阅：体验包 $1.99 / 月得 200 积分，轻量包 $3.99 / 月得 800 积分，畅听包 $9.99 / 月得 2200 积分。每月自动续费，到账时剩余积分清零、重新发放当月额度，订阅期内存储配额升级 1G。' },
   { q: '支持哪些语言？', a: '内置中英文等多款音色；多语言收听会把文档先翻译成目标语言，再以对应音色朗读。' },
   { q: '文档内容安全吗？', a: '文档仅你自己可见，登录后加密同步到云端，可随时删除或彻底清除。' },
   { q: '需要登录才能用吗？', a: '需要。登录后文库、收听进度与积分才能跨设备同步；未登录时只能在本机创建文档。' },
@@ -68,7 +73,7 @@ export function LandingView() {
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search)
-    if (sp.get('success')) setNotice('支付成功，积分已到账！')
+    if (sp.get('success')) setNotice('订阅成功，本月积分已到账！')
     else if (sp.get('cancel')) setNotice('已取消支付')
   }, [])
 
@@ -209,8 +214,8 @@ export function LandingView() {
       <section id="pricing" className="section">
         <div className="section-head">
           <p className="kicker">积分</p>
-          <h2 className="section-title">免费起步，按需购买</h2>
-          <p className="section-sub">AI 语音按字数消耗积分，购买任意套餐后存储配额升级</p>
+          <h2 className="section-title">免费起步，按月订阅</h2>
+          <p className="section-sub">AI 语音按字数消耗积分，包月到账，剩余积分到期清零</p>
         </div>
         {notice && <p className="plan-notice">{notice}</p>}
         <div className="plans">
@@ -270,7 +275,7 @@ export function LandingView() {
                 disabled={busyId === plan.id}
                 style={{ width: '100%' }}
               >
-                {busyId === plan.id ? '处理中…' : authed ? '立即购买' : '登录后购买'}
+                {busyId === plan.id ? '处理中…' : authed ? '立即订阅' : '登录后订阅'}
               </button>
             </div>
             )

@@ -30,7 +30,12 @@ function formatBytes(n: number): string {
 
 export default function CreditsPage() {
   const { status } = useSession()
-  const [balance, setBalance] = useState<{ creditsBalance: number; quotaBytes: number; purchased: boolean } | null>(null)
+  const [balance, setBalance] = useState<{
+    creditsBalance: number
+    quotaBytes: number
+    purchased: boolean
+    subscription: { planId: string | null; status: string; periodEnd: string | null } | null
+  } | null>(null)
   const [items, setItems] = useState<Transaction[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -85,11 +90,16 @@ export default function CreditsPage() {
           </p>
           <p className="mt-1 text-sm text-slate-500">
             存储配额 {balance ? formatBytes(balance.quotaBytes) : '—'}
-            {balance?.purchased ? '（已升级）' : ''}
+            {balance?.purchased ? '（订阅期内 1G）' : ''}
           </p>
+          {balance?.subscription?.status === 'active' ? (
+            <p className="mt-1 text-sm text-slate-500">订阅中 · 剩余积分到期清零</p>
+          ) : (
+            <p className="mt-1 text-sm text-slate-500">未订阅 · 注册即送 50 积分</p>
+          )}
         </div>
         <Link href="/#pricing" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-          购买积分
+          订阅套餐
         </Link>
       </div>
 

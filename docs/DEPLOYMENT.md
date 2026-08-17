@@ -16,6 +16,7 @@
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | 可选 | Google Cloud Console 创建 OAuth Client，配置后才显示 Google 登录按钮 |
 | `STRIPE_SECRET_KEY` | 支付上线前 | Stripe 密钥；测试用 `sk_test_...`，上线切 `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | 支付上线前 | Stripe Webhook 签名密钥 `whsec_...`；本地联调用 `stripe listen --forward-to localhost:3000/api/webhooks/stripe` |
+| `STRIPE_PRICE_STARTER` / `STRIPE_PRICE_LIGHT` / `STRIPE_PRICE_UNLIMITED` | 包月订阅 | 三个包月套餐的 Stripe Price ID；用 `npm run stripe:plans`（`tsx --env-file-if-exists=.env.local scripts/setup-stripe-plans.ts`）自动创建并打印 |
 | `OPENAI_API_KEY` | 云语音 | [platform.openai.com](https://platform.openai.com) → API Keys；不配置则阅读器只有浏览器语音，云端音色合成返回错误 |
 | `TTS_PROVIDER` | 可选 | 云端语音供应商，默认 `openai`；切换豆包时填 `doubao` |
 | `DOUBAO_API_KEY` | 豆包语音 | 火山引擎语音技术控制台 → API Key 管理 创建（`X-Api-Key`，非方舟 `ark-` 密钥）；配合 `TTS_PROVIDER=doubao` 使用 |
@@ -26,7 +27,7 @@
 
 - 迁移脚本：`npm run db:migrate`（读取 `.env.local` 的 `DATABASE_URL`）。
 - Vercel 构建**不会**自动跑迁移，需要在本地或任意有连接串的环境手动执行。
-- 已应用的迁移：`001_auth.sql`、`002_auth_adapter_fix.sql`、`004_auth_hardening.sql`、`005_documents.sql`、`006_credits.sql`、`007_tts_cache.sql`、`008_tts_cache_rate.sql`。
+- 已应用的迁移：`001_auth.sql`、`002_auth_adapter_fix.sql`、`004_auth_hardening.sql`、`005_documents.sql`、`006_credits.sql`、`007_tts_cache.sql`、`008_tts_cache_rate.sql`、`009_subscriptions.sql`。
 - 新迁移文件放在 `db/migrations/`，命名保持递增序号。
 
 ## 三、Resend 域名验证（正式发信前）
@@ -56,8 +57,10 @@
 
 1. 注册新账号 → `/api/credits/balance` 返回 `creditsBalance: 50`（注册赠送）
 2. Google 首次登录新邮箱 → 同样获得 50 积分（`events.createUser` 钩子）
-3. `/pricing` 展示三档套餐（$1.99 / $3.99 / $9.99）与当前余额
-4. Stripe 测试模式支付（4242 4242 4242 4242 测试卡）→ 回到 `/pricing?success=1`，余额增加、`/credits` 出现「购买体验包」流水、配额变为 1G
+3. 首页/我的页展示三档包月套餐（$1.99 / $3.99 / $9.99 每月）
+4. Stripe 测试模式订阅（4242 4242 4242 4242 测试卡）→ 回到首页 `?success=1`，余额变为套餐额度、`/credits` 出现「订阅…本月积分」流水、配额变为 1G、显示下次续费日期
+5. Stripe Webhook 需开启事件：`checkout.session.completed`、`invoice.paid`、`customer.subscription.deleted`
+6. 到期清零验证：手动触发 `customer.subscription.deleted` 后，余额为 0、配额回到 100MB，流水出现「订阅到期，积分清零」
 5. Webhook 重复投递（`stripe trigger checkout.session.completed` 或重放事件）→ 不重复入账（幂等）
 6. 未购买账号打开阅读器设置 → 逐句模式显示锁定态；购买后显示开关与暂停时长（1–10 秒）
 7. 逐句模式开启后播放：每句播完暂停 N 秒自动继续；手动暂停时停止自动继续

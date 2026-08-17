@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/server'
-import { createCheckoutSession } from '@/lib/payments/stripe'
+import { createCheckoutSession, cancelSubscription } from '@/lib/payments/stripe'
+import { getActiveStripeSubscriptionId } from '@/lib/db/credits'
 
 export const runtime = 'nodejs'
 
@@ -18,6 +19,10 @@ export async function POST(req: Request) {
   const packageId = typeof body?.packageId === 'string' ? body.packageId : ''
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
   try {
+    const activeSubscriptionId = await getActiveStripeSubscriptionId(session.user.id)
+    if (activeSubscriptionId) {
+      await cancelSubscription(activeSubscriptionId)
+    }
     const checkoutSession = await createCheckoutSession(session.user.id, packageId, appUrl)
     return NextResponse.json({ url: checkoutSession.url })
   } catch (err) {
