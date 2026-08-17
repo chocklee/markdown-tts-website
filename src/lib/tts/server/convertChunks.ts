@@ -28,7 +28,7 @@ export function splitIntoChunks(content: string, opts: ChunkOptions): string[] {
       for (let i = 0; i < chars.length; i += opts.maxChars) {
         chunks.push(chars.slice(i, i + opts.maxChars).join(''))
       }
-    } else if (Array.from(current).length + len > opts.maxChars) {
+    } else if (Array.from(current).length + 1 + len > opts.maxChars) {
       flush()
       current = text
     } else {

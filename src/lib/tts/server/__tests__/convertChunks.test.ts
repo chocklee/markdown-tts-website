@@ -31,4 +31,10 @@ describe('splitIntoChunks', () => {
     expect(chunks[0]).toContain('第一段')
     expect(chunks[0]).toContain('第三段')
   })
+
+  it('合并分隔符计入长度上限（边界）', () => {
+    expect(splitIntoChunks('abc\n\nde', { ...BASE, maxChars: 5 })).toEqual(['abc', 'de'])
+    expect(splitIntoChunks('abcd\n\ne', { ...BASE, maxChars: 5 })).toEqual(['abcd', 'e'])
+    expect(splitIntoChunks('abc\n\nde', { ...BASE, maxChars: 6 })).toEqual(['abc\nde'])
+  })
 })
