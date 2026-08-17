@@ -399,8 +399,8 @@
       display: flex;
       align-items: center;
       gap: 14px;
-      padding: 14px 0;
-      margin-bottom: 10px;
+      margin: 0 -40px 10px;
+      padding: 14px 40px;
       background: color-mix(in oklch, var(--bg) 88%, transparent);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid transparent;
