@@ -2,6 +2,24 @@ import { pool } from '@/lib/db/pool'
 
 export type ConvertStatus = 'pending' | 'converting' | 'done' | 'failed'
 
+export interface ConvertedMeta {
+  userId: string
+  docId: string
+  voice: string
+  rate: number
+  skipCode: boolean
+  skipTable: boolean
+  chars: number
+  sizeBytes: number
+  status: ConvertStatus
+  progress: number
+  chunksTotal: number
+  chunksDone: number
+  contentType: string
+  error: string | null
+  updatedAt: string
+}
+
 export interface ConvertedAudio {
   userId: string
   docId: string
@@ -69,6 +87,18 @@ export async function getConverted(userId: string, docId: string): Promise<Conve
     [userId, docId],
   )
   return rows[0] ? mapRow(rows[0]) : null
+}
+
+export async function getConvertedMeta(userId: string, docId: string): Promise<ConvertedMeta | null> {
+  const { rows } = await pool.query<Row>(
+    `SELECT user_id, doc_id, voice, rate, skip_code, skip_table, chars, size_bytes, status,
+            progress, chunks_total, chunks_done, content_type, error, updated_at
+     FROM converted_audios WHERE user_id = $1 AND doc_id = $2`,
+    [userId, docId],
+  )
+  if (!rows[0]) return null
+  const { audio, ...meta } = mapRow(rows[0])
+  return meta
 }
 
 export interface CreateConvertedInput {
