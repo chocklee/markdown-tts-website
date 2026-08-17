@@ -91,7 +91,7 @@ export const zh = {
   'landing.charsK': '约 {n} 千字',
 
   'library.title': '文库',
-  'library.files': '{n} 个文件',
+  'library.files': '个文件',
   'library.usedOf': '已用 {used} / {quota}',
   'library.searchPlaceholder': '搜索标题或内容…',
   'library.searchLabel': '搜索文件',

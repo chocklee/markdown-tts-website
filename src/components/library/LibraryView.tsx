@@ -154,7 +154,7 @@ export function LibraryView() {
           <header className="page-head">
             <h1>{t('library.title')}</h1>
             <p className="meta">
-              <span className="num">{docsCount}</span> {t('library.files', { n: docsCount })}
+              <span className="num">{docsCount}</span> {t('library.files')}
               {status === 'authenticated' && quota
                 ? ` · ${t('library.usedOf', { used: formatBytes(usedBytes), quota: formatBytes(quota.quotaBytes) })}`
                 : ''}

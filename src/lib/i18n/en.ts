@@ -93,7 +93,7 @@ export const en: Record<keyof typeof zh, string> = {
   'landing.charsK': '~{n}k chars',
 
   'library.title': 'Library',
-  'library.files': '{n} files',
+  'library.files': 'files',
   'library.usedOf': 'Used {used} / {quota}',
   'library.searchPlaceholder': 'Search title or content…',
   'library.searchLabel': 'Search documents',
