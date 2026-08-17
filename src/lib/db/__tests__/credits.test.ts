@@ -106,40 +106,49 @@ describe('pageRows', () => {
 })
 
 describe('refundCredits', () => {
-  it('删除匹配的 consumption 扣费行（kind/ref/amount=-amount）后才加余额', async () => {
+  it('认领单条 consumption 行、写 adjustment 审计行后才加余额', async () => {
     const client = mockClient()
     vi.mocked(client.query)
-      .mockResolvedValueOnce({ rows: [{ id: 'tx-1' }], rowCount: 1 } as never)
-      .mockResolvedValueOnce({ rows: [], rowCount: 1 } as never)
-    await refundCredits('u1', 3, 'ref-1', { docId: 'd' })
+      .mockResolvedValueOnce({ rows: [{ id: 'tx-1' }], rowCount: 1 } as never) // 认领 UPDATE
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 } as never) // INSERT adjustment
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 } as never) // UPDATE credits_balance
+    await refundCredits('u1', 3, 'ref-1', { docId: 'd' }, '合成失败退还积分')
     const calls = vi.mocked(client.query).mock.calls as [string, unknown[]?][]
-    const del = calls.find(([sql]) => typeof sql === 'string' && sql.includes('DELETE FROM credit_transactions'))
-    expect(del?.[1]).toEqual(['u1', 'ref-1', -3])
+    const claim = calls.find(([sql]) => typeof sql === 'string' && sql.includes('FOR UPDATE SKIP LOCKED'))
+    expect(claim).toBeTruthy()
+    expect(claim?.[0]).toContain("kind = 'consumption'")
+    expect(claim?.[0]).toContain('LIMIT 1')
+    expect(claim?.[0]).toContain('ORDER BY created_at, id')
+    expect(claim?.[1]).toEqual(['u1', 'ref-1', -3])
+    const audit = calls.find(([sql]) => typeof sql === 'string' && sql.includes("'adjustment'"))
+    expect(audit?.[1]).toEqual(['u1', 3, 'ref-1', '合成失败退还积分', JSON.stringify({ docId: 'd' })])
     const upd = calls.find(([sql]) => typeof sql === 'string' && sql.includes('UPDATE users SET credits_balance'))
     expect(upd?.[1]).toEqual([3, 'u1'])
     expect(calls.some(([sql]) => sql === 'COMMIT')).toBe(true)
     expect(client.release).toHaveBeenCalled()
   })
 
-  it('同 ref 无剩余 consumption 行时（已退过一次）ROLLBACK 且不加余额', async () => {
+  it('无匹配 consumption 行时 ROLLBACK 且不写审计行不加余额', async () => {
     const client = mockClient()
-    vi.mocked(client.query).mockResolvedValueOnce({ rows: [], rowCount: 0 } as never)
-    await refundCredits('u1', 3, 'ref-1', { docId: 'd' })
+    vi.mocked(client.query).mockResolvedValueOnce({ rows: [], rowCount: 0 } as never) // 认领落空
+    await refundCredits('u1', 3, 'ref-1', { docId: 'd' }, '合成失败退还积分')
     const calls = vi.mocked(client.query).mock.calls as [string, unknown[]?][]
     expect(calls.some(([sql]) => sql === 'ROLLBACK')).toBe(true)
+    expect(calls.some(([sql]) => typeof sql === 'string' && sql.includes("'adjustment'"))).toBe(false)
     expect(calls.some(([sql]) => typeof sql === 'string' && sql.includes('UPDATE users SET credits_balance'))).toBe(false)
     expect(calls.some(([sql]) => sql === 'COMMIT')).toBe(false)
   })
 
-  it('只删除金额匹配的 consumption 行（不同金额的扣费行不受影响）', async () => {
+  it('同 ref+amount 多笔扣费时只认领一行（LIMIT 1）', async () => {
     const client = mockClient()
     vi.mocked(client.query).mockResolvedValueOnce({ rows: [{ id: 'tx-1' }], rowCount: 1 } as never)
-    await refundCredits('u1', 3, 'ref-1', { docId: 'd' })
-    const del = vi.mocked(client.query).mock.calls.find(
-      ([sql]) => typeof sql === 'string' && sql.includes('DELETE FROM credit_transactions'),
+    await refundCredits('u1', 3, 'ref-1', { docId: 'd' }, '合成失败退还积分')
+    const claim = vi.mocked(client.query).mock.calls.find(
+      ([sql]) => typeof sql === 'string' && sql.includes('FOR UPDATE SKIP LOCKED'),
     ) as [string, unknown[]]
-    const [sql, params] = del
-    expect(sql).toContain("kind = 'consumption'")
-    expect(params).toEqual(['u1', 'ref-1', -3])
+    expect(claim[0]).toContain('LIMIT 1')
+    expect(claim[0]).toContain('ORDER BY created_at, id')
+    expect(claim[0]).toContain("kind = 'consumption'")
+    expect(claim[1]).toEqual(['u1', 'ref-1', -3])
   })
 })

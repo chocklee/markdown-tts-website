@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     result = await provider.synthesize({ text, voice, rate })
   } catch (err) {
     console.error('synthesize failed', err)
-    refundCredits(session.user.id, credits, textHashKey, meta).catch((refundErr) => {
+    refundCredits(session.user.id, credits, textHashKey, meta, '合成失败退还积分').catch((refundErr) => {
       console.error('refund credits failed', refundErr)
     })
     return NextResponse.json({ error: await serverT('server.synthesizeFailed') }, { status: 500 })

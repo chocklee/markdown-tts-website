@@ -202,15 +202,23 @@ export async function refundCredits(
   amount: number,
   ref: string,
   meta: unknown,
+  description = '合成失败退还积分',
 ): Promise<void> {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    // 每笔扣费恰好退一次：删除对应的 consumption 扣费行（amount 存负数）
-    // 并发退款只有一个能删到行；无扣费行时直接返回，防止重复退款/无扣费退款
+    // 单行认领：把一条匹配的 consumption 扣费行标记为 refund（amount 存负数）
+    // FOR UPDATE SKIP LOCKED 保证并发退款各认领不同行；每笔扣费恰好退一次
     const { rowCount } = await client.query<{ id: string }>(
-      `DELETE FROM credit_transactions
-       WHERE user_id = $1 AND ref = $2 AND kind = 'consumption' AND amount = $3
+      `UPDATE credit_transactions
+       SET kind = 'refund'
+       WHERE id = (
+         SELECT id FROM credit_transactions
+         WHERE user_id = $1 AND ref = $2 AND kind = 'consumption' AND amount = $3
+         ORDER BY created_at, id
+         LIMIT 1
+         FOR UPDATE SKIP LOCKED
+       )
        RETURNING id`,
       [userId, ref, -amount],
     )
@@ -218,6 +226,12 @@ export async function refundCredits(
       await client.query('ROLLBACK')
       return
     }
+    // 审计行：消费记录里同时可见扣费（改 kind 后的 refund 行）与退款（adjustment 行）
+    await client.query(
+      `INSERT INTO credit_transactions (user_id, amount, kind, ref, description, meta)
+       VALUES ($1, $2, 'adjustment', $3, $4, $5)`,
+      [userId, amount, ref, description, JSON.stringify(meta)],
+    )
     await client.query('UPDATE users SET credits_balance = credits_balance + $1 WHERE id = $2', [
       amount,
       userId,

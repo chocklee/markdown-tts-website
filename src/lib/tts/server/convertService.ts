@@ -16,6 +16,7 @@ import {
 
 export const CONVERT_BATCH_SIZE = 4
 export const CONVERT_DESC = '完整转换'
+const CONVERT_REFUND_DESC = '完整转换失败退还积分'
 
 export function convertRef(docId: string, voice: string, rate: number, skipCode: boolean, skipTable: boolean): string {
   return `convert:${docId}:${voice}:${rate}:${skipCode ? 1 : 0}:${skipTable ? 1 : 0}`
@@ -150,7 +151,7 @@ export async function advanceConversion(userId: string, docId: string, batchSize
       if (usedBytes > quotaBytes) {
         const failed = await failConverted(userId, docId, 'QUOTA_EXCEEDED', done)
         if (failed) {
-          await refundCredits(userId, creditsFor(row), ref, { docId, reason: 'quota' })
+          await refundCredits(userId, creditsFor(row), ref, { docId, reason: 'quota' }, CONVERT_REFUND_DESC)
         }
         const current = await getConvertedMeta(userId, docId)
         return toStatus(current ?? { ...updated, status: 'failed', error: 'QUOTA_EXCEEDED', sizeBytes: 0 })
@@ -166,7 +167,7 @@ export async function advanceConversion(userId: string, docId: string, batchSize
     const message = err instanceof Error ? err.message : String(err)
     const failed = await failConverted(userId, docId, message, row.chunksDone)
     if (failed) {
-      await refundCredits(userId, creditsFor(row), ref, { docId, reason: 'failed' })
+      await refundCredits(userId, creditsFor(row), ref, { docId, reason: 'failed' }, CONVERT_REFUND_DESC)
     }
     const current = await getConvertedMeta(userId, docId)
     return toStatus(current ?? { ...row, status: 'failed', error: message, sizeBytes: 0 })

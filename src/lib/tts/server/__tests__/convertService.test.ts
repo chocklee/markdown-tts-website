@@ -166,7 +166,7 @@ describe('advanceConversion', () => {
     vi.mocked(sumConvertedBytes).mockResolvedValue(0)
     const status = await advanceConversion('u1', 'doc-1', 4)
     expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'QUOTA_EXCEEDED', 8)
-    expect(refundCredits).toHaveBeenCalledWith('u1', expect.any(Number), 'convert:doc-1:alloy:1:1:1', expect.objectContaining({ docId: 'doc-1', reason: 'quota' }))
+    expect(refundCredits).toHaveBeenCalledWith('u1', expect.any(Number), 'convert:doc-1:alloy:1:1:1', expect.objectContaining({ docId: 'doc-1', reason: 'quota' }), '完整转换失败退还积分')
     expect(status.status).toBe('failed')
   })
 
@@ -194,7 +194,7 @@ describe('advanceConversion', () => {
     vi.mocked(sumConvertedBytes).mockResolvedValue(100)
     const status = await advanceConversion('u1', 'doc-1', 4)
     expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'QUOTA_EXCEEDED', 8)
-    expect(refundCredits).toHaveBeenCalledWith('u1', expect.any(Number), 'convert:doc-1:alloy:1:1:1', expect.objectContaining({ docId: 'doc-1', reason: 'quota' }))
+    expect(refundCredits).toHaveBeenCalledWith('u1', expect.any(Number), 'convert:doc-1:alloy:1:1:1', expect.objectContaining({ docId: 'doc-1', reason: 'quota' }), '完整转换失败退还积分')
     expect(finishConverted).not.toHaveBeenCalled()
     expect(status.status).toBe('failed')
   })
@@ -211,7 +211,7 @@ describe('advanceConversion', () => {
     } as never)
     const status = await advanceConversion('u1', 'doc-1', 4)
     expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'boom', 0)
-    expect(refundCredits).toHaveBeenCalledWith('u1', expect.any(Number), 'convert:doc-1:alloy:1:1:1', expect.objectContaining({ docId: 'doc-1', reason: 'failed' }))
+    expect(refundCredits).toHaveBeenCalledWith('u1', expect.any(Number), 'convert:doc-1:alloy:1:1:1', expect.objectContaining({ docId: 'doc-1', reason: 'failed' }), '完整转换失败退还积分')
     expect(status.status).toBe('failed')
   })
 
