@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { parseDocument } from '@/lib/markdown/parse'
 import { saveDocumentToLibrary } from '@/lib/library/actions'
 import { scheduleSync } from '@/lib/sync/schedule'
+import { IconUpload, IconClose } from '@/components/app/icons'
 
 const MAX_SIZE = 5 * 1024 * 1024
 
@@ -51,6 +52,15 @@ export default function InputSection() {
     reader.readAsText(file, 'utf-8')
   }
 
+  function clearFile() {
+    if (fileRef.current) fileRef.current.value = ''
+    readingFileRef.current = null
+    setFileName('')
+    setFileLabel('')
+    setReading(false)
+    setError('')
+  }
+
   async function start() {
     if (saving) return
     if (reading) {
@@ -80,46 +90,62 @@ export default function InputSection() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-16">
-      <h1 className="text-center text-3xl font-bold">听 Markdown</h1>
-      <p className="mt-2 text-center text-slate-500">粘贴或上传 Markdown 文件，边看边听 AI 朗读</p>
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="new-wrap">
+      <div className="card new-card">
+        <p className="new-label">粘贴 Markdown</p>
         <textarea
           aria-label="Markdown 内容"
-          className="min-h-64 w-full resize-y rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-blue-400"
-          placeholder="在这里粘贴 Markdown 内容，或点击下方按钮上传 .md 文件（≤5MB）"
+          className="new-textarea"
+          placeholder="在这里粘贴 Markdown 内容，支持标题、列表、引用等语法…"
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <div className="mt-3 flex items-center gap-3">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".md,text/markdown,text/plain"
-            className="hidden"
-            onChange={(e) => handleFile(e.target.files?.[0])}
-          />
+
+        <div className="new-divider">或上传文件</div>
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".md,text/markdown,text/plain"
+          className="hidden"
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
+        {fileLabel ? (
+          <div className="file-chip">
+            <span className="file-icon" aria-hidden="true">
+              MD
+            </span>
+            <div className="body">
+              <div className="title">{fileLabel}</div>
+              <div className="sub">{reading ? '正在读取文件…' : '文件已读取，可以直接开始收听'}</div>
+            </div>
+            <button type="button" className="icon-btn" aria-label="移除文件" onClick={clearFile}>
+              <IconClose />
+            </button>
+          </div>
+        ) : (
           <button
             type="button"
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
+            className="dropzone"
             onClick={() => {
               if (fileRef.current) fileRef.current.value = ''
               fileRef.current?.click()
             }}
           >
-            上传 .md 文件
+            <IconUpload />
+            <span className="t">选择 .md 文件</span>
+            <span className="s">支持 Markdown 与纯文本，不超过 5MB</span>
           </button>
-          <button
-            type="button"
-            className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            disabled={saving || reading}
-            onClick={() => void start()}
-          >
+        )}
+
+        {error && <p className="new-error">{error}</p>}
+
+        <div className="new-actions">
+          <span className="meta">保存后自动进入朗读页面</span>
+          <button type="button" className="btn-primary" disabled={saving || reading} onClick={() => void start()}>
             {saving ? '保存中…' : '开始收听'}
           </button>
         </div>
-        {fileLabel && <p className="mt-2 text-xs text-slate-400">文件：{fileLabel}</p>}
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </div>
     </div>
   )

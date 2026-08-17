@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn, getProviders } from 'next-auth/react'
+import AuthShell from '@/components/app/AuthShell'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -28,7 +29,7 @@ export default function LoginPage() {
         setError('邮箱或密码错误；未验证的邮箱请先完成邮件验证')
         return
       }
-      router.push('/library')
+      router.push('/')
       router.refresh()
     } catch {
       setError('网络错误，请重试')
@@ -51,55 +52,76 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto max-w-sm px-4 py-16">
-      <h1 className="text-center text-2xl font-bold">登录</h1>
-      <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div>
-          <label htmlFor="email" className="mb-1 block text-sm text-slate-600">
-            邮箱
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-blue-400"
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="mb-1 block text-sm text-slate-600">
-            密码
-          </label>
-          <input
-            id="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-blue-400"
-          />
-        </div>
+    <AuthShell title="欢迎回来" subtitle="登录后同步文库、积分与高级音色">
+      <form onSubmit={submit} className="auth-form">
+        <label htmlFor="email" className="auth-label">
+          邮箱
+        </label>
+        <input
+          id="email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="auth-field"
+        />
+        <label htmlFor="password" className="auth-label">
+          密码
+        </label>
+        <input
+          id="password"
+          type="password"
+          required
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="auth-field"
+        />
         {error && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="auth-error">
             {error}
           </p>
         )}
-        <button type="submit" className="w-full rounded-lg bg-blue-600 py-2.5 text-white hover:bg-blue-700">
+        <button type="submit" className="btn-primary auth-submit">
           登录
         </button>
       </form>
 
-      <div className="mt-4 text-center text-sm">
-        <Link href="/forgot-password" className="text-slate-600 hover:text-slate-900">
-          忘记密码？
-        </Link>
-        <span className="mx-2 text-slate-300">|</span>
-        <Link href="/register" className="text-slate-600 hover:text-slate-900">
-          注册新账号
-        </Link>
+      <div className="auth-divider">或</div>
+
+      {hasGoogle && (
+        <button
+          type="button"
+          onClick={() => void signIn('google', { callbackUrl: '/' })}
+          className="btn-secondary auth-google"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="#4285F4"
+              d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.09 3.57-5.16 3.57-8.81z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.95H1.29v3.09A12 12 0 0 0 12 24z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.27 14.29a7.2 7.2 0 0 1 0-4.58V6.62H1.29a12 12 0 0 0 0 10.76l3.98-3.09z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 4.77c1.76 0 3.34.61 4.58 1.8l3.44-3.44A11.98 11.98 0 0 0 1.29 6.62l3.98 3.09C6.22 6.88 8.87 4.77 12 4.77z"
+            />
+          </svg>
+          使用 Google 登录
+        </button>
+      )}
+
+      <div className="auth-links">
+        <Link href="/forgot-password">忘记密码？</Link>
+        <Link href="/register">注册新账号</Link>
       </div>
 
       {error && (
@@ -108,27 +130,17 @@ export default function LoginPage() {
             type="button"
             onClick={() => void resend()}
             disabled={resendSent}
-            className="mt-4 w-full rounded-lg border border-slate-300 py-2.5 text-sm text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="auth-resend"
           >
             {resendSent ? '已重新发送验证邮件' : '未收到验证邮件？重新发送'}
           </button>
           {resendError && (
-            <p role="alert" className="mt-2 text-center text-sm text-red-600">
+            <p role="alert" className="auth-error auth-error-center">
               {resendError}
             </p>
           )}
         </>
       )}
-
-      {hasGoogle && (
-        <button
-          type="button"
-          onClick={() => void signIn('google', { callbackUrl: '/library' })}
-          className="mt-3 w-full rounded-lg border border-slate-300 py-2.5 text-sm text-slate-700 hover:bg-slate-100"
-        >
-          使用 Google 登录
-        </button>
-      )}
-    </main>
+    </AuthShell>
   )
 }

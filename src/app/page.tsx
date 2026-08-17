@@ -1,5 +1,5 @@
-import InputSection from '@/components/home/InputSection'
+import { LandingView } from '@/components/home/LandingView'
 
 export default function HomePage() {
-  return <InputSection />
+  return <LandingView />
 }

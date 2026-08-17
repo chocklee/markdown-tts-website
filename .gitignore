@@ -7,6 +7,8 @@ node_modules/
 .worktrees/
 node_modules/
 .next/
+.next.bak-*/
+.playwright-cli/
 out/
 *.tsbuildinfo
 next-env.d.ts

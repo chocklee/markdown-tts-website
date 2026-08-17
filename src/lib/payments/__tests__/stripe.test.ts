@@ -21,8 +21,8 @@ describe('createCheckoutSession', () => {
       expect.objectContaining({
         mode: 'payment',
         metadata: expect.objectContaining({ userId: 'u1', packageId: 'starter', credits: '200' }),
-        success_url: 'https://app.example.com/pricing?success=1&session_id={CHECKOUT_SESSION_ID}',
-        cancel_url: 'https://app.example.com/pricing?cancel=1',
+        success_url: 'https://app.example.com?success=1&session_id={CHECKOUT_SESSION_ID}',
+        cancel_url: 'https://app.example.com?cancel=1',
       }),
     )
   })

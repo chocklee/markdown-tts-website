@@ -46,7 +46,7 @@ describe('SettingsPanel 逐句模式', () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: '未登录' }, 401))
     render(<SettingsPanel onClose={vi.fn()} />)
     expect(await screen.findByText(/购买后解锁逐句模式/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /购买后解锁逐句模式/ })).toHaveAttribute('href', '/pricing')
+    expect(screen.getByRole('link', { name: /购买后解锁逐句模式/ })).toHaveAttribute('href', '/#pricing')
     expect(screen.getByRole('checkbox', { name: '逐句模式（未解锁）' })).toBeDisabled()
   })
 
@@ -109,14 +109,15 @@ describe('SettingsPanel 音色选择', () => {
       { id: 'shimmer', name: 'Shimmer（明亮）' },
     ])
     render(<SettingsPanel onClose={vi.fn()} />)
-    const voiceSelect = await screen.findByRole('combobox', { name: '音色选择' })
-    expect(await screen.findByRole('option', { name: '浏览器语音' })).toBeEnabled()
-    expect(await screen.findByRole('option', { name: 'Nova（温暖）' })).toBeEnabled()
+    const browser = await screen.findByRole('radio', { name: '浏览器语音' })
+    const nova = await screen.findByRole('radio', { name: 'Nova（温暖）' })
+    expect(browser).not.toHaveAttribute('aria-disabled', 'true')
+    expect(nova).not.toHaveAttribute('aria-disabled', 'true')
 
-    await userEvent.selectOptions(voiceSelect, 'nova')
+    await userEvent.click(nova)
     expect(useReaderStore.getState().settings.voice).toBe('nova')
 
-    await userEvent.selectOptions(voiceSelect, 'browser')
+    await userEvent.click(browser)
     expect(useReaderStore.getState().settings.voice).toBe('browser')
   })
 
@@ -124,10 +125,10 @@ describe('SettingsPanel 音色选择', () => {
     mockSettingsFetch({ creditsBalance: 0, purchased: false }, [{ id: 'nova', name: 'Nova（温暖）' }])
     render(<SettingsPanel onClose={vi.fn()} />)
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: 'Nova（温暖）' })).toBeDisabled()
+      expect(screen.getByRole('radio', { name: 'Nova（温暖）' })).toHaveAttribute('aria-disabled', 'true')
     })
-    expect(screen.getByRole('option', { name: '浏览器语音' })).toBeEnabled()
-    expect(screen.getByRole('link', { name: /购买积分后使用云音色/ })).toHaveAttribute('href', '/pricing')
+    expect(screen.getByRole('radio', { name: '浏览器语音' })).not.toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('link', { name: /购买积分后使用云音色/ })).toHaveAttribute('href', '/#pricing')
   })
 
   it('余额接口异常时云端音色锁定，浏览器音色可用', async () => {
@@ -139,9 +140,9 @@ describe('SettingsPanel 音色选择', () => {
     })
     render(<SettingsPanel onClose={vi.fn()} />)
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: 'Nova（温暖）' })).toBeDisabled()
+      expect(screen.getByRole('radio', { name: 'Nova（温暖）' })).toHaveAttribute('aria-disabled', 'true')
     })
-    expect(screen.getByRole('option', { name: '浏览器语音' })).toBeEnabled()
+    expect(screen.getByRole('radio', { name: '浏览器语音' })).not.toHaveAttribute('aria-disabled', 'true')
   })
 
   it('余额加载中不显示云端音色锁定态', async () => {
@@ -153,12 +154,12 @@ describe('SettingsPanel 音色选择', () => {
     })
     render(<SettingsPanel onClose={vi.fn()} />)
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: 'Nova（温暖）' })).toBeEnabled()
+      expect(screen.getByRole('radio', { name: 'Nova（温暖）' })).not.toHaveAttribute('aria-disabled', 'true')
     })
     expect(screen.queryByRole('link', { name: /购买积分后使用云音色/ })).not.toBeInTheDocument()
   })
 
-  it('音色接口失败时下拉仅保留浏览器音色', async () => {
+  it('音色接口失败时仅保留浏览器音色', async () => {
     fetchMock.mockImplementation((url: string) => {
       if (String(url).includes('/api/tts/voices')) {
         return Promise.resolve(jsonResponse({ error: '内部错误' }, 500))
@@ -167,8 +168,8 @@ describe('SettingsPanel 音色选择', () => {
     })
     render(<SettingsPanel onClose={vi.fn()} />)
     await waitFor(() => {
-      expect(screen.queryByRole('option', { name: /Nova/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('radio', { name: /Nova/ })).not.toBeInTheDocument()
     })
-    expect(screen.getByRole('option', { name: '浏览器语音' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '浏览器语音' })).toBeInTheDocument()
   })
 })

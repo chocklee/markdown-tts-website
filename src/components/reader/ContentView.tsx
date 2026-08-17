@@ -16,14 +16,14 @@ function InlineParts({ parts }: { parts: StyledLeaf[] }) {
           const safe = sanitizeUrl(part.href)
           if (safe) {
             return (
-              <a key={i} href={safe} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+              <a key={i} href={safe} target="_blank" rel="noreferrer">
                 {part.text}
               </a>
             )
           }
         }
         let content: React.ReactNode = part.text
-        if (part.code) content = <code className="rounded bg-slate-100 px-1">{content}</code>
+        if (part.code) content = <code>{content}</code>
         if (part.italic) content = <em>{content}</em>
         if (part.bold) content = <strong>{content}</strong>
         return <span key={i}>{content}</span>
@@ -60,26 +60,21 @@ function BlockContent({
   switch (block.type) {
     case 'heading': {
       const Tag = `h${Math.min(Math.max(block.depth, 1), 6)}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
-      const sizes: Record<string, string> = {
-        h1: 'mt-8 mb-4 text-3xl font-bold',
-        h2: 'mt-8 mb-3 text-2xl font-bold',
-        h3: 'mt-6 mb-2 text-xl font-semibold',
-      }
       return (
-        <Tag id={`block-${block.id}`} className={sizes[Tag] ?? 'mt-6 mb-2 text-lg font-semibold'}>
+        <Tag id={`block-${block.id}`}>
           {renderInline(block.node)}
         </Tag>
       )
     }
     case 'paragraph':
-      return <p className="my-3 leading-8">{renderInline(block.node)}</p>
+      return <p>{renderInline(block.node)}</p>
     case 'list': {
       const node = block.node
       const ordered = node.type === 'list' ? node.ordered : false
       const items = node.type === 'list' ? node.children : []
       const ListTag = ordered ? 'ol' : 'ul'
       return (
-        <ListTag className={`my-3 space-y-1 ${ordered ? 'list-decimal' : 'list-disc'} pl-6`}>
+        <ListTag className={ordered ? 'list-decimal' : 'list-disc'}>
           {items.map((item, i) => (
             <li key={i}>{renderInline(item)}</li>
           ))}
@@ -87,16 +82,13 @@ function BlockContent({
       )
     }
     case 'blockquote':
-      return <blockquote className="my-3 border-l-4 border-slate-300 pl-4 text-slate-600">{renderInline(block.node)}</blockquote>
+      return <blockquote>{renderInline(block.node)}</blockquote>
     case 'code':
       if (skipCode) {
-        return <p className="my-3 rounded bg-slate-100 p-3 text-sm text-slate-400">已跳过代码块，可在朗读设置中开启</p>
+        return <p className="skipped">已跳过代码块，可在朗读设置中开启</p>
       }
       return (
-        <pre
-          data-sent-block={block.sentenceIds.join(' ')}
-          className="my-3 overflow-x-auto rounded-lg bg-slate-900 p-4 text-sm text-slate-100"
-        >
+        <pre data-sent-block={block.sentenceIds.join(' ')}>
           <code>{block.text}</code>
         </pre>
       )
@@ -104,16 +96,16 @@ function BlockContent({
       const node = block.node
       if (node.type !== 'table') return null
       if (skipTable) {
-        return <p className="my-3 rounded bg-slate-100 p-3 text-sm text-slate-400">已跳过表格，可在朗读设置中开启</p>
+        return <p className="skipped">已跳过表格，可在朗读设置中开启</p>
       }
       return (
-        <div data-sent-block={block.sentenceIds.join(' ')} className="my-3 overflow-x-auto">
-          <table className="border-collapse text-sm">
+        <div data-sent-block={block.sentenceIds.join(' ')} className="table-wrap">
+          <table>
             <tbody>
               {node.children.map((row, i) => (
                 <tr key={i}>
                   {row.children.map((cell, j) => (
-                    <td key={j} className={`border border-slate-300 px-3 py-1 ${i === 0 ? 'bg-slate-100 font-medium' : ''}`}>
+                    <td key={j} className={i === 0 ? 'head' : undefined}>
                       {plainText(cell)}
                     </td>
                   ))}
@@ -125,7 +117,7 @@ function BlockContent({
       )
     }
     case 'thematicBreak':
-      return <hr className="my-6 border-slate-200" />
+      return <hr />
     default:
       return null
   }

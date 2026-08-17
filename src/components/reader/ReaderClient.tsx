@@ -7,6 +7,7 @@ import { migrateLegacyDocument } from '@/lib/library/actions'
 import { loadPosition, savePosition } from '@/lib/storage/local'
 import { useReaderStore } from '@/lib/state/readerStore'
 import { ReaderLayout } from '@/components/reader/ReaderLayout'
+import { AppShell } from '@/components/app/AppShell'
 import type { ReaderDocument } from '@/types/reader'
 import type { LibraryDocument } from '@/types/document'
 
@@ -82,9 +83,20 @@ export function ReaderClient({ docId }: { docId: string | null }) {
     }
   }, [])
 
-  if (!doc) {
-    return <div className="p-10 text-center text-slate-400">加载中…</div>
-  }
-
-  return <ReaderLayout document={doc} />
+  return (
+    <AppShell nav="reader">
+      {!doc ? (
+        <div className="view active">
+          <div className="reader-toolbar">
+            <span className="doc-title">加载中…</span>
+          </div>
+          <p className="meta" style={{ textAlign: 'center', padding: '48px 0' }}>
+            正在载入文档…
+          </p>
+        </div>
+      ) : (
+        <ReaderLayout document={doc} />
+      )}
+    </AppShell>
+  )
 }

@@ -32,8 +32,8 @@ export async function createCheckoutSession(
       },
     ],
     metadata: { userId, packageId, credits: String(pkg.credits) },
-    success_url: `${appUrl}/pricing?success=1&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/pricing?cancel=1`,
+    success_url: `${appUrl}?success=1&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}?cancel=1`,
   })
 }
 

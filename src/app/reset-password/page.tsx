@@ -2,6 +2,7 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import AuthShell from '@/components/app/AuthShell'
 
 function ResetPasswordPage() {
   const searchParams = useSearchParams()
@@ -36,60 +37,69 @@ function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <main className="mx-auto max-w-sm px-4 py-20 text-center">
-        <p className="text-slate-500">重置链接无效，请重新发起忘记密码。</p>
-        <Link href="/forgot-password" className="mt-4 inline-block text-blue-600">
-          重新发送
-        </Link>
-      </main>
+      <AuthShell title="重置链接无效" subtitle="请重新发起忘记密码来获取新的重置链接">
+        <div className="auth-result">
+          <Link href="/forgot-password" className="btn-primary auth-submit auth-link-btn">
+            重新发送
+          </Link>
+        </div>
+      </AuthShell>
     )
   }
 
   return (
-    <main className="mx-auto max-w-sm px-4 py-16">
-      <h1 className="text-center text-2xl font-bold">设置新密码</h1>
+    <AuthShell title="设置新密码" subtitle="为你的账号设置一个新密码">
       {done ? (
-        <p className="mt-6 rounded-lg border border-slate-200 bg-white p-4 text-center text-sm text-slate-600">
-          密码已更新，<Link href="/login" className="text-blue-600">去登录</Link>
-        </p>
+        <div className="auth-result">
+          <p>密码已更新，现在可以用新密码登录了。</p>
+          <Link href="/login" className="btn-primary auth-submit auth-link-btn">
+            去登录
+          </Link>
+        </div>
       ) : (
-        <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm text-slate-600">
-              新密码（至少 8 位）
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-blue-400"
-            />
-          </div>
+        <form onSubmit={submit} className="auth-form">
+          <label htmlFor="password" className="auth-label">
+            新密码（至少 8 位）
+          </label>
+          <input
+            id="password"
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="auth-field"
+          />
           {error && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="auth-error">
               {error}
             </p>
           )}
           <button
             type="submit"
             disabled={saving}
-            className="w-full rounded-lg bg-blue-600 py-2.5 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary auth-submit"
           >
             保存新密码
           </button>
         </form>
       )}
-    </main>
+    </AuthShell>
   )
 }
 
 export default function ResetPasswordPageWrapper() {
   return (
-    <Suspense fallback={<div className="p-10 text-center text-slate-400">加载中…</div>}>
+    <Suspense
+      fallback={
+        <AuthShell title="设置新密码">
+          <p className="auth-result" style={{ color: 'var(--muted)' }}>
+            加载中…
+          </p>
+        </AuthShell>
+      }
+    >
       <ResetPasswordPage />
     </Suspense>
   )

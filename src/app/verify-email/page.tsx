@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { pool } from '@/lib/db/pool'
+import AuthShell from '@/components/app/AuthShell'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,23 +40,21 @@ export default async function VerifyEmailPage({
   }
 
   return (
-    <main className="mx-auto max-w-md px-4 py-20 text-center">
-      <h1 className="text-2xl font-bold">
-        {status === 'success' ? '邮箱验证成功' : status === 'expired' ? '验证链接已过期' : '验证链接无效'}
-      </h1>
-      <p className="mt-3 text-slate-500">
-        {status === 'success'
+    <AuthShell
+      title={status === 'success' ? '邮箱验证成功' : status === 'expired' ? '验证链接已过期' : '验证链接无效'}
+      subtitle={
+        status === 'success'
           ? '现在可以登录你的账号了。'
           : status === 'expired'
             ? '请重新注册，或在登录页点击「重新发送验证邮件」。'
-            : '请检查邮件中的链接是否完整，或重新注册。'}
-      </p>
-      <Link
-        href="/login"
-        className="mt-6 inline-block rounded-lg bg-blue-600 px-6 py-2.5 text-white hover:bg-blue-700"
-      >
-        去登录
-      </Link>
-    </main>
+            : '请检查邮件中的链接是否完整，或重新注册。'
+      }
+    >
+      <div className="auth-result">
+        <Link href="/login" className="btn-primary auth-submit auth-link-btn">
+          去登录
+        </Link>
+      </div>
+    </AuthShell>
   )
 }

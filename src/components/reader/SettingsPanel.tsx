@@ -1,10 +1,17 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { useReaderStore } from '@/lib/state/readerStore'
+import { IconCheck } from '@/components/app/icons'
 
 function formatRate(rate: number): string {
   return rate.toFixed(2).replace(/\.?0+$/, '')
+}
+
+interface Voice {
+  id: string
+  name: string
+  description?: string
 }
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -16,9 +23,10 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setSentencePauseSeconds = useReaderStore((s) => s.setSentencePauseSeconds)
   const toggleSkipCode = useReaderStore((s) => s.toggleSkipCode)
   const toggleSkipTable = useReaderStore((s) => s.toggleSkipTable)
-  const [purchased, setPurchased] = useState<boolean | null>(null)
+
+  const [voices, setVoices] = useState<Voice[]>([])
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null)
-  const [voices, setVoices] = useState<{ id: string; name: string }[]>([])
+  const [purchased, setPurchased] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -27,7 +35,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       .then((data) => {
         if (cancelled) return
         setPurchased(Boolean(data?.purchased))
-        setCreditsBalance(typeof data?.creditsBalance === 'number' ? data.creditsBalance : 0)
+        setCreditsBalance(typeof data?.creditsBalance === 'number' ? data.creditsBalance : null)
       })
       .catch(() => {
         if (cancelled) return
@@ -48,18 +56,69 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   }, [])
 
   const cloudLocked = creditsBalance !== null && creditsBalance <= 0
+  const voiceRows: { id: string; name: string; desc: string }[] = [
+    { id: 'browser', name: '浏览器语音', desc: '免费 · 本机合成' },
+    ...voices.map((v) => ({
+      id: v.id,
+      name: v.name,
+      desc: v.description ?? '云端 AI 音色',
+    })),
+  ]
+
+  const rateFill = `${((settings.rate - 0.5) / 1.5) * 100}%`
+  const volumeFill = `${settings.volume * 100}%`
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold">朗读设置</h2>
-        <button type="button" onClick={onClose} aria-label="关闭" className="text-slate-400 hover:text-slate-600">
-          ✕
-        </button>
+      <p className="setting-label" style={{ marginTop: 0 }}>
+        音色
+      </p>
+      <div role="radiogroup" aria-label="音色选择">
+        {voiceRows.map((v) => {
+          const locked = v.id !== 'browser' && cloudLocked
+          const sel = settings.voice === v.id
+          return (
+            <div
+              key={v.id}
+              role="radio"
+              aria-label={v.name}
+              aria-checked={sel}
+              aria-disabled={locked ? 'true' : undefined}
+              tabIndex={locked ? -1 : 0}
+              className={`option-row ${sel ? 'sel' : ''}`}
+              style={locked ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
+              onClick={() => {
+                if (!locked) setVoice(v.id)
+              }}
+              onKeyDown={(e) => {
+                if (!locked && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault()
+                  setVoice(v.id)
+                }
+              }}
+            >
+              <div>
+                <div className="name">{v.name}</div>
+                <div className="desc">{locked ? '需积分解锁 · ' : ''}{v.desc}</div>
+              </div>
+              <span className="check">
+                <IconCheck />
+              </span>
+            </div>
+          )
+        })}
       </div>
+      {cloudLocked && (
+        <p className="settings-hint">
+          余额不足，云音色需积分解锁。
+          <Link href="/#pricing" className="link">
+            购买积分后使用云音色
+          </Link>
+        </p>
+      )}
 
-      <label className="block text-sm text-slate-600">
-        语速：{formatRate(settings.rate)}x
+      <p className="setting-label">语速</p>
+      <div className="speed-row">
         <input
           type="range"
           min={0.5}
@@ -67,13 +126,14 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           step={0.25}
           value={settings.rate}
           onChange={(e) => setRate(Number(e.target.value))}
-          aria-label="语速调节"
-          className="mt-1 w-full"
+          aria-label="语速"
+          style={{ '--fill': rateFill } as CSSProperties}
         />
-      </label>
+        <span className="val">{formatRate(settings.rate)}x</span>
+      </div>
 
-      <label className="mt-4 block text-sm text-slate-600">
-        音量：{Math.round(settings.volume * 100)}%
+      <p className="setting-label">音量</p>
+      <div className="speed-row">
         <input
           type="range"
           min={0}
@@ -81,85 +141,100 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           step={0.05}
           value={settings.volume}
           onChange={(e) => setVolume(Number(e.target.value))}
-          aria-label="音量调节"
-          className="mt-1 w-full"
+          aria-label="音量"
+          style={{ '--fill': volumeFill } as CSSProperties}
         />
-      </label>
+        <span className="val">{Math.round(settings.volume * 100)}%</span>
+      </div>
 
-      <div className="mt-4">
-        <label className="block text-sm text-slate-600">
-          音色
-          <select
-            value={settings.voice}
-            onChange={(e) => setVoice(e.target.value)}
-            aria-label="音色选择"
-            className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
-          >
-            <option value="browser">浏览器语音</option>
-            {voices.map((v) => (
-              <option key={v.id} value={v.id} disabled={cloudLocked}>
-                {v.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {cloudLocked && (
-          <p className="mt-1 text-xs text-slate-400">
-            🔒 <Link href="/pricing" className="text-blue-600 hover:underline">购买积分后使用云音色</Link>
+      <p className="setting-label">朗读</p>
+      <div className="option-row">
+        <div>
+          <div className="name">跳过代码块</div>
+          <div className="desc">朗读时跳过代码片段</div>
+        </div>
+        <input
+          type="checkbox"
+          className="switch"
+          checked={settings.skipCode}
+          onChange={toggleSkipCode}
+          aria-label="跳过代码块"
+        />
+      </div>
+      <div className="option-row">
+        <div>
+          <div className="name">跳过表格</div>
+          <div className="desc">朗读时跳过表格内容</div>
+        </div>
+        <input
+          type="checkbox"
+          className="switch"
+          checked={settings.skipTable}
+          onChange={toggleSkipTable}
+          aria-label="跳过表格"
+        />
+      </div>
+
+      <p className="setting-label">逐句模式</p>
+      {purchased ? (
+        <>
+          <div className="option-row">
+            <div>
+              <div className="name">逐句模式</div>
+              <div className="desc">每句朗读后暂停，便于思考</div>
+            </div>
+            <input
+              type="checkbox"
+              className="switch"
+              checked={settings.sentencePause}
+              onChange={(e) => setSentencePause(e.target.checked)}
+              aria-label="逐句模式"
+            />
+          </div>
+          {settings.sentencePause && (
+            <div className="option-row">
+              <div>
+                <div className="name">暂停时长</div>
+                <div className="desc">每句结束后等待的秒数</div>
+              </div>
+              <select
+                value={settings.sentencePauseSeconds}
+                onChange={(e) => setSentencePauseSeconds(Number(e.target.value))}
+                aria-label="暂停时长"
+                className="speed-select"
+              >
+                {[1, 2, 3, 5, 8, 10].map((s) => (
+                  <option key={s} value={s}>
+                    {s} 秒
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="option-row" style={{ opacity: 0.6 }}>
+            <div>
+              <div className="name">
+                逐句模式<span className="tag-inline">Pro</span>
+              </div>
+              <div className="desc">每句朗读后暂停，便于思考</div>
+            </div>
+            <input type="checkbox" className="switch" disabled checked={false} aria-label="逐句模式（未解锁）" />
+          </div>
+          <p className="settings-hint">
+            <Link href="/#pricing" className="link">
+              购买后解锁逐句模式
+            </Link>
           </p>
-        )}
-      </div>
+        </>
+      )}
 
-      <div className="mt-4 space-y-2">
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={settings.skipCode} onChange={toggleSkipCode} />
-          跳过代码块
-        </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={settings.skipTable} onChange={toggleSkipTable} />
-          跳过表格
-        </label>
-        {purchased === true ? (
-          <>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={settings.sentencePause}
-                onChange={(e) => setSentencePause(e.target.checked)}
-                aria-label="逐句模式"
-              />
-              逐句模式（每句后暂停）
-            </label>
-            {settings.sentencePause && (
-              <label className="flex items-center gap-2 pl-6 text-sm text-slate-600">
-                暂停时长
-                <select
-                  value={settings.sentencePauseSeconds}
-                  onChange={(e) => setSentencePauseSeconds(Number(e.target.value))}
-                  aria-label="暂停时长"
-                  className="rounded border border-slate-300 px-2 py-1"
-                >
-                  {[1, 2, 3, 5, 8, 10].map((s) => (
-                    <option key={s} value={s}>
-                      {s} 秒
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </>
-        ) : (
-          <label className="flex items-center gap-2 text-sm text-slate-400">
-            <input type="checkbox" disabled aria-label="逐句模式（未解锁）" />
-            逐句模式
-            <span className="text-xs">
-              🔒 <Link href="/pricing" className="text-blue-600 hover:underline">购买后解锁逐句模式</Link>
-            </span>
-          </label>
-        )}
-      </div>
-
-      <p className="mt-6 text-xs text-slate-400">语速与音量在下一句生效；切换跳过选项会停止播放</p>
+      <p className="settings-hint">语速与音量在下一句生效；切换跳过选项会停止播放。</p>
+      <button type="button" onClick={onClose} className="btn-secondary" style={{ width: '100%', marginTop: 14 }}>
+        完成
+      </button>
     </div>
   )
 }

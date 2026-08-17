@@ -23,7 +23,7 @@ describe('OutlinePanel', () => {
     render(<OutlinePanel document={DOC} />)
     expect(screen.getByText('第一章')).toBeInTheDocument()
     expect(screen.getByText('第二章')).toBeInTheDocument()
-    expect(screen.getByText('第二章').className).toContain('bg-blue-50')
+    expect(screen.getByRole('button', { name: /第二章/ }).className).toContain('active')
   })
 
   it('点击章节跳转到该章节第一句', async () => {
