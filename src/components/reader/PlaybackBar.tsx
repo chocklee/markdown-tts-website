@@ -1,14 +1,121 @@
 'use client'
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useReaderStore } from '@/lib/state/readerStore'
 import { useI18n } from '@/lib/i18n'
-import { IconPlay, IconPause } from '@/components/app/icons'
+import { IconPlay, IconPause, IconDownload } from '@/components/app/icons'
 
 function formatRate(rate: number): string {
   return rate.toFixed(2).replace(/\.?0+$/, '')
 }
 
-export function PlaybackBar() {
+function formatTime(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return '0:00'
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function SeamlessBar({ url, downloadUrl, title }: { url: string; downloadUrl: string; title: string }) {
+  const { t } = useI18n()
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [playing, setPlaying] = useState(false)
+  const [duration, setDuration] = useState(0)
+  const [time, setTime] = useState(0)
+
+  useEffect(() => {
+    const el = audioRef.current
+    if (!el) return
+    const onMeta = () => setDuration(Number.isFinite(el.duration) ? el.duration : 0)
+    const onTime = () => setTime(el.currentTime)
+    const onPlay = () => setPlaying(true)
+    const onPause = () => setPlaying(false)
+    const onEnd = () => setPlaying(false)
+    el.addEventListener('loadedmetadata', onMeta)
+    el.addEventListener('timeupdate', onTime)
+    el.addEventListener('play', onPlay)
+    el.addEventListener('pause', onPause)
+    el.addEventListener('ended', onEnd)
+    return () => {
+      el.removeEventListener('loadedmetadata', onMeta)
+      el.removeEventListener('timeupdate', onTime)
+      el.removeEventListener('play', onPlay)
+      el.removeEventListener('pause', onPause)
+      el.removeEventListener('ended', onEnd)
+    }
+  }, [])
+
+  const toggle = () => {
+    const el = audioRef.current
+    if (!el) return
+    if (el.paused) void el.play().catch(() => {})
+    else el.pause()
+  }
+
+  const seek = (clientX: number) => {
+    const el = audioRef.current
+    const track = trackRef.current
+    if (!el || !track || duration <= 0) return
+    const rect = track.getBoundingClientRect()
+    const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1)
+    el.currentTime = ratio * duration
+  }
+
+  const seekFromKey = (delta: number) => {
+    const el = audioRef.current
+    if (!el) return
+    el.currentTime = Math.min(Math.max(el.currentTime + delta, 0), duration)
+  }
+
+  const progress = duration > 0 ? (time / duration) * 100 : 0
+
+  return (
+    <div className="player" role="region" aria-label={t('reader.seamless')}>
+      <audio ref={audioRef} src={url} preload="metadata" />
+      <div className="p-times">
+        <span>{title}</span>
+        <span>{formatTime(time)} / {formatTime(duration)}</span>
+      </div>
+      <div
+        ref={trackRef}
+        className="p-track"
+        role="slider"
+        aria-label={t('reader.seamless')}
+        aria-valuemin={0}
+        aria-valuemax={Math.max(duration, 1)}
+        aria-valuenow={time}
+        tabIndex={0}
+        onMouseDown={(e) => seek(e.clientX)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowRight') seekFromKey(5)
+          else if (e.key === 'ArrowLeft') seekFromKey(-5)
+        }}
+      >
+        <div className="rail" aria-hidden="true" />
+        <div className="fill" aria-hidden="true" style={{ width: `${progress}%` }} />
+        <div className="thumb" aria-hidden="true" style={{ left: `${progress}%` }} />
+      </div>
+      <div className="p-row">
+        <div className="p-info">
+          <div className="t">{title}</div>
+          <div className="m">
+            {playing ? t('reader.playing') : t('reader.paused')} · {t('reader.seamless')}
+          </div>
+        </div>
+        <div className="p-controls">
+          <button type="button" className="c-btn play" onClick={toggle} aria-label={playing ? t('reader.pause') : t('reader.play')}>
+            {playing ? <IconPause /> : <IconPlay />}
+          </button>
+          <a className="c-btn" href={downloadUrl} download aria-label={t('convert.download')}>
+            <IconDownload />
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function PlaybackBar({ seamlessUrl, seamlessDownloadUrl }: { seamlessUrl?: string; seamlessDownloadUrl?: string }) {
   const { t } = useI18n()
   const isPlaying = useReaderStore((s) => s.isPlaying)
   const currentIndex = useReaderStore((s) => s.currentIndex)
@@ -26,6 +133,16 @@ export function PlaybackBar() {
   const total = speakableIds.length
   const chapters = document?.chapters ?? []
   const hasChapters = chapters.length > 0
+
+  if (seamlessUrl && seamlessDownloadUrl) {
+    return (
+      <SeamlessBar
+        url={seamlessUrl}
+        downloadUrl={seamlessDownloadUrl}
+        title={document?.title ?? ''}
+      />
+    )
+  }
 
   if (total === 0) return null
 
