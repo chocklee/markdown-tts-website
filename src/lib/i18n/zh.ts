@@ -321,6 +321,7 @@ export const zh = {
   'auth.verifyInvalidSub': '请检查邮件中的链接是否完整，或重新注册。',
   'auth.goLogin': '去登录',
 
+  'server.audioNotFound': '音频不存在或尚未生成',
   'server.rateLimited': '操作过于频繁，请稍后再试',
   'server.invalidBody': '请求格式错误',
   'server.emailInvalid': '邮箱格式不正确',
@@ -329,6 +330,7 @@ export const zh = {
   'server.emailTaken': '该邮箱已注册',
   'server.registerFailed': '注册失败，请稍后再试',
   'server.operationFailed': '操作失败，请稍后再试',
+  'server.proRequired': '请开通 Pro 套餐',
   'server.resetLinkInvalid': '重置链接无效',
   'server.resetLinkExpired': '重置链接已过期',
   'server.resetFailed': '重置失败，请稍后再试',
@@ -339,5 +341,6 @@ export const zh = {
   'server.voiceNotFound': '音色不存在',
   'server.rateInvalid': '语速无效',
   'server.creditsInsufficient': '积分不足，请购买积分',
+  'server.docNotFound': '文档不存在',
   'server.synthesizeFailed': '语音合成失败，请稍后再试',
 }

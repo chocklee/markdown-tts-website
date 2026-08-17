@@ -323,6 +323,7 @@ export const en: Record<keyof typeof zh, string> = {
   'auth.verifyInvalidSub': 'Check that the link in your email is complete, or sign up again.',
   'auth.goLogin': 'Go to sign in',
 
+  'server.audioNotFound': 'Audio not found or not generated yet',
   'server.rateLimited': 'Too many attempts, please try again later',
   'server.invalidBody': 'Invalid request',
   'server.emailInvalid': 'Invalid email address',
@@ -331,6 +332,7 @@ export const en: Record<keyof typeof zh, string> = {
   'server.emailTaken': 'This email is already registered',
   'server.registerFailed': 'Sign-up failed, please try again later',
   'server.operationFailed': 'Something went wrong, please try again later',
+  'server.proRequired': 'Pro plan required',
   'server.resetLinkInvalid': 'Invalid reset link',
   'server.resetLinkExpired': 'Reset link has expired',
   'server.resetFailed': 'Reset failed, please try again later',
@@ -341,5 +343,6 @@ export const en: Record<keyof typeof zh, string> = {
   'server.voiceNotFound': 'Voice not found',
   'server.rateInvalid': 'Invalid speech rate',
   'server.creditsInsufficient': 'Not enough credits, please top up',
+  'server.docNotFound': 'Document not found',
   'server.synthesizeFailed': 'Speech synthesis failed, please try again later',
 }
