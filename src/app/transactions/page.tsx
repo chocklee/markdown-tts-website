@@ -25,6 +25,8 @@ function txDescription(t: (key: string, vars?: Record<string, string | number>) 
   const FIXED: Record<string, string> = {
     '注册赠送积分': 'transactions.signupBonus',
     '云端朗读': 'transactions.cloudRead',
+    '完整转换': 'transactions.fullConvert',
+    '完整转换失败退还积分': 'transactions.refund',
     '合成失败退还积分': 'transactions.refund',
     '上期积分到期清零': 'transactions.subscriptionReset',
     '订阅到期，积分清零': 'transactions.subscriptionExpired',
