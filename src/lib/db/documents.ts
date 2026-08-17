@@ -38,11 +38,29 @@ export async function getUserQuotaBytes(userId: string): Promise<number> {
 }
 
 export async function listServerDocuments(userId: string): Promise<SyncedDocument[]> {
-  // 惰性清理过期回收站
-  await pool.query(
-    'DELETE FROM documents WHERE user_id = $1 AND delete_expires_at IS NOT NULL AND delete_expires_at < $2',
-    [userId, Date.now()],
-  )
+  // 惰性清理过期回收站：连带清理转换音频，事务保证 documents 与 converted_audios 一致
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query(
+      `DELETE FROM converted_audios
+       WHERE user_id = $1 AND doc_id IN (
+         SELECT doc_id FROM documents
+         WHERE user_id = $1 AND delete_expires_at IS NOT NULL AND delete_expires_at < $2
+       )`,
+      [userId, Date.now()],
+    )
+    await client.query(
+      'DELETE FROM documents WHERE user_id = $1 AND delete_expires_at IS NOT NULL AND delete_expires_at < $2',
+      [userId, Date.now()],
+    )
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
   const { rows } = await pool.query<DocumentRow>(
     `SELECT doc_id, title, content_md, content_hash, file_size_bytes, updated_at, deleted_at, delete_expires_at
      FROM documents WHERE user_id = $1 ORDER BY updated_at DESC`,
@@ -104,8 +122,18 @@ export async function upsertServerDocument(userId: string, doc: SyncedDocument):
 }
 
 export async function hardDeleteServerDocument(userId: string, docId: string): Promise<void> {
-  await pool.query('DELETE FROM documents WHERE user_id = $1 AND doc_id = $2', [userId, docId])
-  await pool.query('DELETE FROM converted_audios WHERE user_id = $1 AND doc_id = $2', [userId, docId])
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query('DELETE FROM documents WHERE user_id = $1 AND doc_id = $2', [userId, docId])
+    await client.query('DELETE FROM converted_audios WHERE user_id = $1 AND doc_id = $2', [userId, docId])
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
 }
 
 export async function sumServerDocumentBytes(userId: string): Promise<number> {

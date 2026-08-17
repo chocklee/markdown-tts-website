@@ -195,7 +195,7 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
 
         <div className="reader-body">
           <article className="article">
-            <ContentView document={document} />
+            <ContentView document={document} seamless={seamless} />
           </article>
           <aside className="outline-rail">
             <p className="rail-cap">{t('reader.outline')}</p>

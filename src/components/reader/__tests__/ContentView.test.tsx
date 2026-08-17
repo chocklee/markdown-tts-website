@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, screen } from '@testing-library/react'
 import { renderWithI18n } from '@/test-utils/i18n'
+import { I18nProvider } from '@/lib/i18n'
 import { ContentView } from '../ContentView'
 import { defaultSettings } from '@/types/reader'
 import { parseDocument } from '@/lib/markdown/parse'
@@ -59,6 +60,41 @@ describe('ContentView', () => {
     renderWithStore(1)
     expect(document.querySelector('mark[data-sent="s2"]')?.className).toContain('current-sentence')
     expect(document.querySelector('mark[data-sent="s3"]')?.className).not.toContain('current-sentence')
+  })
+
+  it('seamless 模式下不加当前句高亮', () => {
+    useReaderStore.setState({
+      document: DOC,
+      settings: { ...defaultSettings },
+      speakableIds: DOC.sentenceIds,
+      currentIndex: 1,
+      isPlaying: true,
+      queue: null,
+      engine: null,
+    })
+    renderWithI18n(<ContentView document={DOC} seamless />)
+    expect(document.querySelectorAll('mark.current-sentence')).toHaveLength(0)
+    expect(document.querySelectorAll('[data-sent-block].current-sentence')).toHaveLength(0)
+  })
+
+  it('切到 seamless 时清除残留当前句高亮', () => {
+    useReaderStore.setState({
+      document: DOC,
+      settings: { ...defaultSettings },
+      speakableIds: DOC.sentenceIds,
+      currentIndex: 1,
+      isPlaying: true,
+      queue: null,
+      engine: null,
+    })
+    const { rerender } = renderWithI18n(<ContentView document={DOC} />)
+    expect(document.querySelector('mark[data-sent="s2"]')?.className).toContain('current-sentence')
+    rerender(
+      <I18nProvider>
+        <ContentView document={DOC} seamless />
+      </I18nProvider>,
+    )
+    expect(document.querySelectorAll('mark.current-sentence')).toHaveLength(0)
   })
 
   it('跳过代码块时显示占位提示', () => {

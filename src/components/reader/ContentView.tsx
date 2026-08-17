@@ -125,7 +125,7 @@ function BlockContent({
   }
 }
 
-function HighlightDriver({ containerRef }: { containerRef: RefObject<HTMLDivElement | null> }) {
+function HighlightDriver({ containerRef, seamless }: { containerRef: RefObject<HTMLDivElement | null>; seamless: boolean }) {
   const activeSentenceId = useReaderStore((s) => s.speakableIds[s.currentIndex] ?? null)
   const firstSentenceId = useReaderStore((s) => s.speakableIds[0] ?? null)
   const skipCode = useReaderStore((s) => s.settings.skipCode)
@@ -138,6 +138,7 @@ function HighlightDriver({ containerRef }: { containerRef: RefObject<HTMLDivElem
     container
       .querySelectorAll('mark.current-sentence, [data-sent-block].current-sentence')
       .forEach((el) => el.classList.remove('current-sentence'))
+    if (seamless) return
     if (!activeSentenceId) return
     const escaped = CSS.escape(activeSentenceId)
     const target =
@@ -153,12 +154,12 @@ function HighlightDriver({ containerRef }: { containerRef: RefObject<HTMLDivElem
       return
     }
     target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [activeSentenceId, firstSentenceId, skipCode, skipTable, containerRef])
+  }, [activeSentenceId, firstSentenceId, skipCode, skipTable, containerRef, seamless])
 
   return null
 }
 
-export function ContentView({ document }: { document: ReaderDocument }) {
+export function ContentView({ document, seamless = false }: { document: ReaderDocument; seamless?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const skipCode = useReaderStore((s) => s.settings.skipCode)
   const skipTable = useReaderStore((s) => s.settings.skipTable)
@@ -174,7 +175,7 @@ export function ContentView({ document }: { document: ReaderDocument }) {
   return (
     <div ref={containerRef}>
       {blocks}
-      <HighlightDriver containerRef={containerRef} />
+      <HighlightDriver containerRef={containerRef} seamless={seamless} />
     </div>
   )
 }
