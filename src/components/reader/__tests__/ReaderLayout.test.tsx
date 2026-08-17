@@ -45,7 +45,7 @@ describe('ReaderLayout convert', () => {
     expect(requested.some((u) => u.includes(DOC.id))).toBe(false)
 
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: /转成音频/ }))
+    await user.click(screen.getByRole('button', { name: /重新转换/ }))
 
     await waitFor(() => {
       const post = fetchMock.mock.calls.find((c) => String(c[0]) === '/api/tts/convert')
@@ -53,5 +53,33 @@ describe('ReaderLayout convert', () => {
       const body = JSON.parse(String(post![1]?.body)) as { docId: string }
       expect(body.docId).toBe(DOC_ID)
     })
+  })
+
+  it('转换完成后默认整篇播放，并提供逐句模式切换按钮', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ status: 'done', progress: 1, voice: 'browser', rate: 1, skipCode: true, skipTable: true }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    renderReader()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '逐句模式' })).toBeInTheDocument()
+    })
+    expect(screen.getByLabelText('下载音频')).toBeInTheDocument()
+  })
+
+  it('未订阅时点击逐句模式打开设置抽屉展示解锁入口', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ status: 'done', progress: 1, voice: 'browser', rate: 1, skipCode: true, skipTable: true }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    renderReader()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '逐句模式' })).toBeInTheDocument()
+    })
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: '逐句模式' }))
+    expect(await screen.findByRole('link', { name: /购买后解锁逐句模式/ })).toBeInTheDocument()
   })
 })

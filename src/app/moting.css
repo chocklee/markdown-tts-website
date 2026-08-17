@@ -1120,6 +1120,21 @@ mark.current-sentence {
 }
 .row-menu button:hover { background: var(--fg-soft); }
 .row-menu button.danger { color: #c0392b; }
+.row-menu a {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 40px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.row-menu a:hover { background: var(--fg-soft); }
 
 /* 阅读器补充 */
 .article .skipped {

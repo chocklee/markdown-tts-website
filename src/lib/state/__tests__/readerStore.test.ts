@@ -66,6 +66,26 @@ describe('readerStore', () => {
     expect(opts.sentencePauseSeconds).toBe(5)
   })
 
+  it('setConvertedSettings 同步设置并重建引擎', () => {
+    const { store } = freshStore()
+    store.setConvertedSettings({ voice: 'alloy', rate: 1.25, skipCode: false, skipTable: true })
+    const state = useReaderStore.getState()
+    expect(state.settings.voice).toBe('alloy')
+    expect(state.settings.rate).toBe(1.25)
+    expect(state.settings.skipCode).toBe(false)
+    expect(state.settings.skipTable).toBe(true)
+    expect(state.engine).toBeInstanceOf(CloudTtsEngine)
+    expect(state.speakableIds.length).toBeGreaterThan(0)
+  })
+
+  it('setConvertedSettings 音色不变时不重建引擎', () => {
+    const { store, engine } = freshStore()
+    store.setConvertedSettings({ voice: 'browser', rate: 1.5 })
+    const state = useReaderStore.getState()
+    expect(state.engine).toBe(engine)
+    expect(state.settings.rate).toBe(1.5)
+  })
+
   it('init 后生成可朗读句子列表', () => {
     const state = useReaderStore.getState()
     expect(state.speakableIds).toEqual(['s1', 's2', 's3', 's4', 's5'])

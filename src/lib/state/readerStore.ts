@@ -28,6 +28,7 @@ interface ReaderState {
   setRate: (rate: number) => void
   setVolume: (volume: number) => void
   setVoice: (voice: string) => void
+  setConvertedSettings: (patch: Partial<Pick<ReaderSettings, 'voice' | 'rate' | 'skipCode' | 'skipTable'>>) => void
   setSentencePause: (enabled: boolean) => void
   setSentencePauseSeconds: (seconds: number) => void
   toggleSkipCode: () => void
@@ -223,6 +224,24 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       volume: s.volume,
       sentencePause: s.sentencePause,
       sentencePauseSeconds: s.sentencePauseSeconds,
+    }
+  },
+
+  // 有已转换音频时，把朗读设置同步成转换时的设置，保证整篇播放可用
+  setConvertedSettings: (patch) => {
+    const { settings, document } = get()
+    const next = { ...settings, ...patch }
+    if (document && next.voice !== settings.voice) {
+      const newEngine = createEngine(next.voice)
+      if (newEngine) {
+        set((s) => ({ settings: next }))
+        rebuildQueue(newEngine)
+        return
+      }
+    }
+    set((s) => ({ settings: next }))
+    if (document && (next.skipCode !== settings.skipCode || next.skipTable !== settings.skipTable)) {
+      get().rebuildSpeakable()
     }
   },
 

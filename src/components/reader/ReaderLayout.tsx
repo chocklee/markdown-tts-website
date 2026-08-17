@@ -20,9 +20,11 @@ type DrawerKind = 'outline' | 'settings' | 'qa' | null
 
 export function ReaderLayout({ document, docId }: { document: ReaderDocument; docId: string }) {
   const [drawer, setDrawer] = useState<DrawerKind>(null)
-  const { creditsBalance } = useAccount()
+  const { creditsBalance, purchased } = useAccount()
   const { t } = useI18n()
   const settings = useReaderStore((s) => s.settings)
+  const setSentencePause = useReaderStore((s) => s.setSentencePause)
+  const setConvertedSettings = useReaderStore((s) => s.setConvertedSettings)
   const showToast = useUiStore((s) => s.showToast)
   const [converted, setConverted] = useState<{
     status: string
@@ -139,13 +141,52 @@ export function ReaderLayout({ document, docId }: { document: ReaderDocument; do
     setConvertProgress(null)
   }, [docId, settings, showToast, t])
 
-  const seamless =
-    converted?.status === 'done' &&
+  // 有已转换音频时默认使用整篇播放；设置与转换不一致时只自动同步一次
+  const syncedRef = useRef(false)
+  const audioReady = converted?.status === 'done' && Boolean(converted.voice)
+  const settingsMatched =
+    audioReady &&
     settings.voice === converted.voice &&
     settings.rate === converted.rate &&
     settings.skipCode === converted.skipCode &&
-    settings.skipTable === converted.skipTable &&
-    !settings.sentencePause
+    settings.skipTable === converted.skipTable
+  const seamless = settingsMatched && !settings.sentencePause
+
+  useEffect(() => {
+    if (!audioReady || !converted) return
+    if (!syncedRef.current) {
+      syncedRef.current = true
+      if (!settingsMatched) {
+        setConvertedSettings({
+          voice: converted.voice,
+          rate: converted.rate,
+          skipCode: converted.skipCode,
+          skipTable: converted.skipTable,
+        })
+      }
+    }
+  }, [audioReady, settingsMatched, converted, setConvertedSettings])
+
+  const toggleMode = useCallback(() => {
+    if (seamless) {
+      if (!purchased) {
+        setDrawer('settings')
+        return
+      }
+      setSentencePause(true)
+    } else {
+      setSentencePause(false)
+      if (converted && !settingsMatched) {
+        setConvertedSettings({
+          voice: converted.voice,
+          rate: converted.rate,
+          skipCode: converted.skipCode,
+          skipTable: converted.skipTable,
+        })
+      }
+    }
+    useReaderStore.getState().stop()
+  }, [seamless, purchased, converted, settingsMatched, setSentencePause, setConvertedSettings])
 
   const DRAWER_TITLES: Record<Exclude<DrawerKind, null>, string> = {
     outline: t('reader.outline'),
@@ -185,11 +226,25 @@ export function ReaderLayout({ document, docId }: { document: ReaderDocument; do
               className="rt-btn"
               onClick={() => void startConvert()}
               disabled={convertProgress != null}
-              aria-label={t('convert.start')}
+              aria-label={converted?.status === 'done' ? t('convert.reconvert') : t('convert.start')}
             >
               <IconCloud />
-              {convertProgress != null ? t('convert.progress', { p: convertProgress }) : t('convert.start')}
+              {convertProgress != null
+                ? t('convert.progress', { p: convertProgress })
+                : converted?.status === 'done'
+                  ? t('convert.reconvert')
+                  : t('convert.start')}
             </button>
+            {audioReady && (
+              <button
+                type="button"
+                className="rt-btn"
+                onClick={() => void toggleMode()}
+                aria-label={seamless ? t('reader.sentenceMode') : t('reader.seamless')}
+              >
+                {seamless ? t('reader.sentenceMode') : t('reader.seamless')}
+              </button>
+            )}
           </div>
         </div>
 
