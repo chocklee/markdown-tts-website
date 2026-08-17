@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { renderWithI18n } from '@/test-utils/i18n'
 import userEvent from '@testing-library/user-event'
 import { listDocuments, deleteDocument } from '@/lib/storage/library'
 import { saveDocumentToLibrary } from '@/lib/library/actions'
@@ -39,8 +40,8 @@ describe('InputSection', () => {
 
   it('粘贴内容后点击开始收听，保存到文件库并跳转阅读器', async () => {
     const user = userEvent.setup()
-    render(<InputSection />)
-    await user.type(screen.getByLabelText('Markdown 内容'), '# 我的笔记\n\n你好。')
+    renderWithI18n(<InputSection />)
+    await user.type(screen.getByLabelText('粘贴 Markdown'), '# 我的笔记\n\n你好。')
     await user.click(screen.getByRole('button', { name: '开始收听' }))
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith(expect.stringMatching(/^\/reader\?docId=/))
@@ -52,14 +53,14 @@ describe('InputSection', () => {
 
   it('内容为空时提示错误', async () => {
     const user = userEvent.setup()
-    render(<InputSection />)
+    renderWithI18n(<InputSection />)
     await user.click(screen.getByRole('button', { name: '开始收听' }))
     expect(screen.getByText('请粘贴内容或选择文件')).toBeInTheDocument()
   })
 
   it('超过 5MB 的文件提示错误', async () => {
     const user = userEvent.setup()
-    render(<InputSection />)
+    renderWithI18n(<InputSection />)
     const bigFile = new File(['x'], 'big.md', { type: 'text/markdown' })
     Object.defineProperty(bigFile, 'size', { value: 6 * 1024 * 1024 })
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
@@ -69,8 +70,8 @@ describe('InputSection', () => {
 
   it('粘贴多字节内容超过 5MB 字节（但不足 5MB 字符数）时提示错误且不跳转', async () => {
     const user = userEvent.setup()
-    render(<InputSection />)
-    const textarea = screen.getByLabelText('Markdown 内容')
+    renderWithI18n(<InputSection />)
+    const textarea = screen.getByLabelText('粘贴 Markdown')
     fireEvent.change(textarea, { target: { value: '你'.repeat(2 * 1024 * 1024) } })
     await user.click(screen.getByRole('button', { name: '开始收听' }))
     expect(screen.getByText('内容超过 5MB 上限')).toBeInTheDocument()
@@ -79,11 +80,11 @@ describe('InputSection', () => {
 
   it('选择合法文件后读取内容并保存到文件库', async () => {
     const user = userEvent.setup()
-    render(<InputSection />)
+    renderWithI18n(<InputSection />)
     const file = new File(['# 文件标题\n\n内容。'], 'notes.md', { type: 'text/markdown' })
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     await user.upload(input, file)
-    const textarea = screen.getByLabelText('Markdown 内容') as HTMLTextAreaElement
+    const textarea = screen.getByLabelText('粘贴 Markdown') as HTMLTextAreaElement
     await waitFor(() => expect(textarea.value).toContain('文件标题'))
     await user.click(screen.getByRole('button', { name: '开始收听' }))
     await waitFor(() =>
@@ -102,8 +103,8 @@ describe('InputSection', () => {
       })
     )
     const user = userEvent.setup()
-    render(<InputSection />)
-    await user.type(screen.getByLabelText('Markdown 内容'), '内容')
+    renderWithI18n(<InputSection />)
+    await user.type(screen.getByLabelText('粘贴 Markdown'), '内容')
     await user.click(screen.getByRole('button', { name: '开始收听' }))
     const savingButton = screen.getByRole('button', { name: '保存中…' })
     expect(savingButton).toBeDisabled()
@@ -130,7 +131,7 @@ describe('InputSection', () => {
       readAsText() {}
     })
     const user = userEvent.setup()
-    render(<InputSection />)
+    renderWithI18n(<InputSection />)
     const file = new File(['内容。'], 'a.md', { type: 'text/markdown' })
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     await user.upload(input, file)

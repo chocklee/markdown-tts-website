@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
+import { renderWithI18n } from '@/test-utils/i18n'
 import userEvent from '@testing-library/user-event'
 import { listDocuments, getDocument, deleteDocument } from '@/lib/storage/library'
 import { saveDocumentToLibrary } from '@/lib/library/actions'
@@ -57,7 +58,7 @@ describe('LibraryPage', () => {
     await saveDocumentToLibrary({ title: '本机笔记', content: '内容' })
     sessionMock.mockReturnValue({ status: 'unauthenticated', data: null })
 
-    render(<LibraryPage />)
+    renderWithI18n(<LibraryPage />)
 
     expect((await screen.findAllByRole('link', { name: '登录 / 注册' })).length).toBeGreaterThan(0)
     expect(screen.getByText('登录后继续')).toBeInTheDocument()
@@ -76,7 +77,7 @@ describe('LibraryPage', () => {
       quotaBytes: 1024 * 1024,
     })
 
-    render(<LibraryPage />)
+    renderWithI18n(<LibraryPage />)
 
     await waitFor(() => expect(runSync).toHaveBeenCalled())
     expect(await screen.findByText(/已用 6 B \/ 1\.0 MB/)).toBeInTheDocument()
@@ -86,7 +87,7 @@ describe('LibraryPage', () => {
   it('重命名文档即时生效并写入 IndexedDB', async () => {
     await saveDocumentToLibrary({ title: '旧标题', content: '内容' })
     sessionMock.mockReturnValue({ status: 'authenticated', data: { user: { email: 'a@b.c' } } })
-    render(<LibraryPage />)
+    renderWithI18n(<LibraryPage />)
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: '更多操作 旧标题' }))
@@ -105,7 +106,7 @@ describe('LibraryPage', () => {
   it('删除进入回收站，可恢复', async () => {
     const doc = await saveDocumentToLibrary({ title: '待删除', content: '内容' })
     sessionMock.mockReturnValue({ status: 'authenticated', data: { user: { email: 'a@b.c' } } })
-    render(<LibraryPage />)
+    renderWithI18n(<LibraryPage />)
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: '更多操作 待删除' }))
@@ -131,7 +132,7 @@ describe('LibraryPage', () => {
   it('彻底删除后从 IndexedDB 移除', async () => {
     const doc = await saveDocumentToLibrary({ title: '要清空', content: '内容' })
     sessionMock.mockReturnValue({ status: 'authenticated', data: { user: { email: 'a@b.c' } } })
-    render(<LibraryPage />)
+    renderWithI18n(<LibraryPage />)
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: '更多操作 要清空' }))
@@ -158,7 +159,7 @@ describe('LibraryPage', () => {
       quotaBytes: 1024 * 1024,
     })
 
-    render(<LibraryPage />)
+    renderWithI18n(<LibraryPage />)
 
     await waitFor(() => expect(runSync).toHaveBeenCalled())
     expect(await screen.findByText('部分文档同步失败，请稍后重试')).toBeInTheDocument()
@@ -176,7 +177,7 @@ describe('LibraryPage', () => {
     )
     const user = userEvent.setup()
 
-    render(<LibraryPage />)
+    renderWithI18n(<LibraryPage />)
     await waitFor(() => expect(runSync).toHaveBeenCalledTimes(1))
 
     const button = screen.getByRole('button', { name: '同步中…' })

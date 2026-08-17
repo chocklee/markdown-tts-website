@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/server'
 import { decodeCursor, listTransactions } from '@/lib/db/credits'
+import { serverT } from '@/lib/i18n/server'
 
 export const runtime = 'nodejs'
 
 export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.id) {
-    return NextResponse.json({ error: '未登录' }, { status: 401 })
+    return NextResponse.json({ error: await serverT('server.unauthorized') }, { status: 401 })
   }
   const url = new URL(req.url)
   const rawLimit = Number(url.searchParams.get('limit') ?? 20)
@@ -18,6 +19,6 @@ export async function GET(req: Request) {
     return NextResponse.json(result)
   } catch (err) {
     console.error('list credit transactions failed', err)
-    return NextResponse.json({ error: '操作失败，请稍后再试' }, { status: 500 })
+    return NextResponse.json({ error: await serverT('server.operationFailed') }, { status: 500 })
   }
 }

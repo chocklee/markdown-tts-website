@@ -20,10 +20,10 @@ export async function runSync(): Promise<SyncResult> {
   try {
     const res = await fetch('/api/documents', { cache: 'no-store' })
     if (res.status === 401) {
-      return { uploaded, downloaded, conflicted, error: '登录状态失效，请重新登录', quotaBytes: null }
+      return { uploaded, downloaded, conflicted, error: 'library.syncSession', quotaBytes: null }
     }
     if (!res.ok) {
-      return { uploaded, downloaded, conflicted, error: '同步失败，请稍后重试', quotaBytes: null }
+      return { uploaded, downloaded, conflicted, error: 'library.syncFailed', quotaBytes: null }
     }
     const data = (await res.json()) as { quotaBytes: number; docs: SyncedDocument[] }
     quotaBytes = data.quotaBytes
@@ -38,10 +38,10 @@ export async function runSync(): Promise<SyncResult> {
         body: JSON.stringify(doc),
       })
       if (putRes.status === 401) {
-        return { uploaded, downloaded, conflicted, error: '登录状态失效，请重新登录', quotaBytes }
+        return { uploaded, downloaded, conflicted, error: 'library.syncSession', quotaBytes }
       }
       if (putRes.status === 413) {
-        return { uploaded, downloaded, conflicted, error: '存储配额不足，本地仍可使用', quotaBytes }
+        return { uploaded, downloaded, conflicted, error: 'library.syncQuota', quotaBytes }
       }
       if (putRes.status === 409) {
         const body = (await putRes.json().catch(() => null)) as { server?: SyncedDocument } | null
@@ -69,9 +69,9 @@ export async function runSync(): Promise<SyncResult> {
       await deleteDocument(docId)
     }
   } catch {
-    return { uploaded, downloaded, conflicted, error: '网络连接失败，请稍后重试', quotaBytes }
+    return { uploaded, downloaded, conflicted, error: 'library.syncNetwork', quotaBytes }
   }
 
-  const error = failed > 0 ? '部分文档同步失败，请稍后重试' : null
+  const error = failed > 0 ? 'library.syncPartial' : null
   return { uploaded, downloaded, conflicted, error, quotaBytes }
 }

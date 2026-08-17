@@ -60,7 +60,7 @@ describe('runSync', () => {
       uploaded: 0,
       downloaded: 0,
       conflicted: 0,
-      error: '登录状态失效，请重新登录',
+      error: 'library.syncSession',
       quotaBytes: null,
     })
   })
@@ -74,7 +74,7 @@ describe('runSync', () => {
       uploaded: 0,
       downloaded: 0,
       conflicted: 0,
-      error: '网络连接失败，请稍后重试',
+      error: 'library.syncNetwork',
       quotaBytes: null,
     })
   })
@@ -96,7 +96,7 @@ describe('runSync', () => {
       return jsonResponse({ quotaBytes: 100, docs: [] })
     })
     const result = await runSync()
-    expect(result.error).toContain('配额')
+    expect(result.error).toBe('library.syncQuota')
     expect(result.quotaBytes).toBe(100)
     expect(result.uploaded).toBe(0)
     const local = await listDocuments()
@@ -150,7 +150,7 @@ describe('runSync', () => {
       return jsonResponse({ quotaBytes: 100, docs: [] })
     })
     const result = await runSync()
-    expect(result.error).toBe('登录状态失效，请重新登录')
+    expect(result.error).toBe('library.syncSession')
     expect(result.uploaded).toBe(0)
     expect(result.quotaBytes).toBe(100)
   })
@@ -162,7 +162,7 @@ describe('runSync', () => {
       return jsonResponse({ quotaBytes: 100, docs: [] })
     })
     const result = await runSync()
-    expect(result.error).toBe('部分文档同步失败，请稍后重试')
+    expect(result.error).toBe('library.syncPartial')
     expect(result.uploaded).toBe(0)
   })
 })

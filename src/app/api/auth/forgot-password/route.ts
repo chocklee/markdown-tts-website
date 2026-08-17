@@ -4,25 +4,26 @@ import { pool } from '@/lib/db/pool'
 import { sendPasswordResetEmail } from '@/lib/email/send'
 import { CONFIG } from '@/lib/config'
 import { clientIp, isRateLimited } from '@/lib/security/rateLimit'
+import { serverT } from '@/lib/i18n/server'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   if (isRateLimited(`forgot:${clientIp(req)}`, 5, 60 * 60 * 1000)) {
-    return NextResponse.json({ error: '操作过于频繁，请稍后再试' }, { status: 429 })
+    return NextResponse.json({ error: await serverT('server.rateLimited') }, { status: 429 })
   }
 
   let body: { email?: string }
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.invalidBody') }, { status: 400 })
   }
   if (typeof body !== 'object' || body === null) {
-    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.invalidBody') }, { status: 400 })
   }
   if (typeof body.email !== 'string') {
-    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.invalidBody') }, { status: 400 })
   }
   const email = body.email.trim().toLowerCase()
 
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
     console.error('forgot password failed', err)
-    return NextResponse.json({ error: '操作失败，请稍后再试' }, { status: 500 })
+    return NextResponse.json({ error: await serverT('server.operationFailed') }, { status: 500 })
   } finally {
     client.release()
   }

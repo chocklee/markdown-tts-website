@@ -6,34 +6,35 @@ import { sendVerificationEmail } from '@/lib/email/send'
 import { grantSignupBonus } from '@/lib/db/credits'
 import { CONFIG } from '@/lib/config'
 import { clientIp, isRateLimited } from '@/lib/security/rateLimit'
+import { serverT } from '@/lib/i18n/server'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   if (isRateLimited(`register:${clientIp(req)}`, 10, 60 * 60 * 1000)) {
-    return NextResponse.json({ error: '操作过于频繁，请稍后再试' }, { status: 429 })
+    return NextResponse.json({ error: await serverT('server.rateLimited') }, { status: 429 })
   }
 
   let body: { email?: string; password?: string }
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.invalidBody') }, { status: 400 })
   }
   if (typeof body !== 'object' || body === null) {
-    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.invalidBody') }, { status: 400 })
   }
 
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
   const password = typeof body.password === 'string' ? body.password : ''
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-    return NextResponse.json({ error: '邮箱格式不正确' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.emailInvalid') }, { status: 400 })
   }
   if (password.length < 8) {
-    return NextResponse.json({ error: '密码至少 8 位' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.pwdShort') }, { status: 400 })
   }
   if (password.length > 72) {
-    return NextResponse.json({ error: '密码过长' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.pwdLong') }, { status: 400 })
   }
 
   const client = await pool.connect()
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     const existing = await client.query('SELECT id FROM users WHERE lower(email) = lower($1)', [email])
     if (existing.rowCount) {
       await client.query('ROLLBACK')
-      return NextResponse.json({ error: '该邮箱已注册' }, { status: 409 })
+      return NextResponse.json({ error: await serverT('server.emailTaken') }, { status: 409 })
     }
     const { rows: userRows } = await client.query<{ id: string }>(
       'INSERT INTO users (email, password_hash, storage_quota_bytes) VALUES ($1, $2, $3) RETURNING id',
@@ -62,10 +63,10 @@ export async function POST(req: Request) {
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
     if (typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505') {
-      return NextResponse.json({ error: '该邮箱已注册' }, { status: 409 })
+      return NextResponse.json({ error: await serverT('server.emailTaken') }, { status: 409 })
     }
     console.error('register failed', err)
-    return NextResponse.json({ error: '注册失败，请稍后再试' }, { status: 500 })
+    return NextResponse.json({ error: await serverT('server.registerFailed') }, { status: 500 })
   } finally {
     client.release()
   }

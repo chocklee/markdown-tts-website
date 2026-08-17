@@ -6,31 +6,32 @@ import { calcCredits, countChars, estimateCostUsd, isValidRate, textHash } from 
 import { getProvider, type TtsProvider } from '@/lib/tts/server/provider'
 import { cleanupExpiredCache, getCachedAudio, upsertCachedAudio } from '@/lib/db/tts'
 import { deductCredits, refundCredits } from '@/lib/db/credits'
+import { serverT } from '@/lib/i18n/server'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) {
-    return NextResponse.json({ error: '未登录' }, { status: 401 })
+    return NextResponse.json({ error: await serverT('server.unauthorized') }, { status: 401 })
   }
   if (isRateLimited(`tts:${session.user.id}`, 60, 60_000)) {
-    return NextResponse.json({ error: '操作过于频繁' }, { status: 429 })
+    return NextResponse.json({ error: await serverT('server.rateLimited') }, { status: 429 })
   }
 
   let body: { text?: unknown; voice?: unknown; rate?: unknown }
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.invalidBody') }, { status: 400 })
   }
   if (typeof body !== 'object' || body === null) {
-    return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.invalidBody') }, { status: 400 })
   }
 
   const text = body.text
   if (typeof text !== 'string' || countChars(text) <= 0 || Array.from(text).length > CONFIG.tts.maxTextChars) {
-    return NextResponse.json({ error: '文本不能为空或过长' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.textEmptyOrLong') }, { status: 400 })
   }
 
   let provider: TtsProvider
@@ -38,16 +39,16 @@ export async function POST(req: Request) {
     provider = getProvider()
   } catch (err) {
     console.error('get tts provider failed', err)
-    return NextResponse.json({ error: '语音服务未配置' }, { status: 500 })
+    return NextResponse.json({ error: await serverT('server.ttsNotConfigured') }, { status: 500 })
   }
 
   const voice = body.voice
   if (typeof voice !== 'string' || !provider.voices.some((v) => v.id === voice)) {
-    return NextResponse.json({ error: '音色不存在' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.voiceNotFound') }, { status: 400 })
   }
   const rate = body.rate
   if (typeof rate !== 'number' || !isValidRate(rate)) {
-    return NextResponse.json({ error: '语速无效' }, { status: 400 })
+    return NextResponse.json({ error: await serverT('server.rateInvalid') }, { status: 400 })
   }
 
   const textHashKey = textHash(provider.id, voice, text, rate)
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
   }
   const deducted = await deductCredits(session.user.id, credits, textHashKey, meta, '云端朗读')
   if (!deducted) {
-    return NextResponse.json({ error: '积分不足，请购买积分' }, { status: 402 })
+    return NextResponse.json({ error: await serverT('server.creditsInsufficient') }, { status: 402 })
   }
 
   let result: { audio: Buffer; contentType: string; costUsd: number }
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
     refundCredits(session.user.id, credits, textHashKey, meta, '合成失败退还积分').catch((refundErr) => {
       console.error('refund credits failed', refundErr)
     })
-    return NextResponse.json({ error: '语音合成失败，请稍后再试' }, { status: 500 })
+    return NextResponse.json({ error: await serverT('server.synthesizeFailed') }, { status: 500 })
   }
 
   try {
