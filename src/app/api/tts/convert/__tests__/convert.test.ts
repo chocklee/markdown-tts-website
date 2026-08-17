@@ -7,7 +7,7 @@ vi.mock('@/lib/tts/server/convertService', () => ({
   startConversion: vi.fn(),
   advanceConversion: vi.fn(),
   getConvertStatus: vi.fn(),
-  CONVERT_BATCH_SIZE: 4,
+  CONVERT_BATCH_SIZE: 1,
 }))
 
 import { auth } from '@/lib/auth/server'

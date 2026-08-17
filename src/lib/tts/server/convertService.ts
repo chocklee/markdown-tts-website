@@ -14,7 +14,7 @@ import {
   type ConvertedMeta,
 } from '@/lib/db/convert'
 
-export const CONVERT_BATCH_SIZE = 4
+export const CONVERT_BATCH_SIZE = 1
 export const CONVERT_DESC = '完整转换'
 const CONVERT_REFUND_DESC = '完整转换失败退还积分'
 
@@ -81,7 +81,7 @@ export async function startConversion(userId: string, docId: string, opts: Start
   const chunks = splitIntoChunks(doc.content, {
     skipCode: opts.skipCode,
     skipTable: opts.skipTable,
-    maxChars: CONFIG.tts.maxTextChars,
+    maxChars: CONFIG.tts.convertChunkChars,
   })
   const chars = chunks.reduce((sum, c) => sum + countChars(c), 0)
   const credits = calcCredits(chars, CONFIG.tts.creditsPer100Chars)
@@ -122,7 +122,7 @@ export async function advanceConversion(userId: string, docId: string, batchSize
   const chunks = splitIntoChunks(doc.content, {
     skipCode: row.skipCode,
     skipTable: row.skipTable,
-    maxChars: CONFIG.tts.maxTextChars,
+    maxChars: CONFIG.tts.convertChunkChars,
   })
   const ref = convertRef(docId, row.voice, row.rate, row.skipCode, row.skipTable)
   const slice = chunks.slice(row.chunksDone, Math.min(row.chunksDone + batchSize, chunks.length))

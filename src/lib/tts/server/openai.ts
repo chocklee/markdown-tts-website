@@ -1,4 +1,5 @@
 import type { TtsProvider } from './provider'
+import { CONFIG } from '@/lib/config'
 import { countChars, estimateCostUsd } from './cost'
 
 const SPEECH_URL = 'https://api.openai.com/v1/audio/speech'
@@ -33,7 +34,7 @@ export const openaiProvider: TtsProvider = {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(CONFIG.tts.synthesizeTimeoutMs),
       body: JSON.stringify({
         model: MODEL,
         voice,

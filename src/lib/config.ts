@@ -21,6 +21,8 @@ export const CONFIG = {
     provider: 'openai',
     creditsPer100Chars: 3,
     maxTextChars: 2000,
+    convertChunkChars: 500,
+    synthesizeTimeoutMs: 120000,
     cacheTtlDays: 30,
   },
   recycle: {
