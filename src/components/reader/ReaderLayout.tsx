@@ -18,7 +18,7 @@ type DrawerKind = 'outline' | 'settings' | 'qa' | null
 
 
 
-export function ReaderLayout({ document }: { document: ReaderDocument }) {
+export function ReaderLayout({ document, docId }: { document: ReaderDocument; docId: string }) {
   const [drawer, setDrawer] = useState<DrawerKind>(null)
   const { creditsBalance } = useAccount()
   const { t } = useI18n()
@@ -41,7 +41,7 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
     let cancelled = false
     async function check() {
       try {
-        const res = await fetch(`/api/tts/convert?docId=${encodeURIComponent(document.id)}`)
+        const res = await fetch(`/api/tts/convert?docId=${encodeURIComponent(docId)}`)
         const data = (await res.json()) as {
           status?: string
           progress?: number
@@ -68,7 +68,7 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
     return () => {
       cancelled = true
     }
-  }, [document.id])
+  }, [docId])
 
   const startConvert = useCallback(async () => {
     aliveRef.current = true
@@ -78,7 +78,7 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          docId: document.id,
+          docId,
           voice: settings.voice,
           rate: settings.rate,
           skipCode: settings.skipCode,
@@ -108,7 +108,7 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
       for (let i = 0; i < 600; i += 1) {
         await new Promise((r) => setTimeout(r, 2000))
         if (!aliveRef.current) return
-        const sres = await fetch(`/api/tts/convert?docId=${encodeURIComponent(document.id)}&advance=1`)
+        const sres = await fetch(`/api/tts/convert?docId=${encodeURIComponent(docId)}&advance=1`)
         if (!aliveRef.current) return
         const sdata = (await sres.json().catch(() => null)) as { status?: string; progress?: number; error?: string } | null
         setConvertProgress(Math.round((sdata?.progress ?? 0) * 100))
@@ -137,7 +137,7 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
       showToast(t('convert.failed'))
     }
     setConvertProgress(null)
-  }, [document.id, settings, showToast, t])
+  }, [docId, settings, showToast, t])
 
   const seamless =
     converted?.status === 'done' &&
@@ -205,8 +205,8 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
       </div>
 
       <PlaybackBar
-        seamlessUrl={seamless ? `/api/tts/convert/${encodeURIComponent(document.id)}/audio` : undefined}
-        seamlessDownloadUrl={seamless ? `/api/tts/convert/${encodeURIComponent(document.id)}/audio?download=1` : undefined}
+        seamlessUrl={seamless ? `/api/tts/convert/${encodeURIComponent(docId)}/audio` : undefined}
+        seamlessDownloadUrl={seamless ? `/api/tts/convert/${encodeURIComponent(docId)}/audio?download=1` : undefined}
       />
 
       <SideDrawer open={drawer !== null} title={drawer ? DRAWER_TITLES[drawer] : ''} onClose={() => setDrawer(null)}>

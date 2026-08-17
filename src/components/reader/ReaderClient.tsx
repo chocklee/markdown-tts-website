@@ -97,7 +97,7 @@ export function ReaderClient({ docId }: { docId: string | null }) {
           </p>
         </div>
       ) : (
-        <ReaderLayout document={doc} />
+        <ReaderLayout document={doc} docId={stored?.docId ?? ''} />
       )}
     </AppShell>
   )
