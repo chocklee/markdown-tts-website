@@ -37,4 +37,8 @@ describe('splitIntoChunks', () => {
     expect(splitIntoChunks('abcd\n\ne', { ...BASE, maxChars: 5 })).toEqual(['abcd', 'e'])
     expect(splitIntoChunks('abc\n\nde', { ...BASE, maxChars: 6 })).toEqual(['abc\nde'])
   })
+
+  it('maxChars 非正时返回空数组', () => {
+    expect(splitIntoChunks('一段文本', { ...BASE, maxChars: 0 })).toEqual([])
+  })
 })

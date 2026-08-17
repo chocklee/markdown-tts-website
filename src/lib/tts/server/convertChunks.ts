@@ -7,6 +7,7 @@ export interface ChunkOptions {
 }
 
 export function splitIntoChunks(content: string, opts: ChunkOptions): string[] {
+  if (opts.maxChars <= 0) return []
   const doc = parseDocument(content)
   const chunks: string[] = []
   let current = ''
