@@ -49,6 +49,8 @@ export function LibraryView() {
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [menuFor, setMenuFor] = useState<string | null>(null)
+  const [converting, setConverting] = useState<Record<string, number>>({})
+  const [convertedMap, setConvertedMap] = useState<Record<string, boolean>>({})
   const [syncing, setSyncing] = useState(false)
   const syncingRef = useRef(false)
   const showToast = useUiStore((s) => s.showToast)
@@ -79,6 +81,59 @@ export function LibraryView() {
       await refresh().catch(() => {})
     }
   }, [status, refresh, showToast, t])
+
+  const convertDoc = useCallback(async (doc: LibraryDocument) => {
+    setConverting((m) => ({ ...m, [doc.docId]: 0 }))
+    try {
+      const res = await fetch('/api/tts/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docId: doc.docId }),
+      })
+      const data = (await res.json().catch(() => null)) as { status?: string; error?: string } | null
+      if (!res.ok) {
+        showToast(data?.error ?? t('convert.failed'))
+        setConverting((m) => { const n = { ...m }; delete n[doc.docId]; return n })
+        return
+      }
+      if (data?.status === 'done') {
+        setConvertedMap((m) => ({ ...m, [doc.docId]: true }))
+        showToast(t('convert.done'))
+        setConverting((m) => { const n = { ...m }; delete n[doc.docId]; return n })
+        return
+      }
+      for (let i = 0; i < 600; i += 1) {
+        await new Promise((r) => setTimeout(r, 2000))
+        const sres = await fetch(`/api/tts/convert?docId=${encodeURIComponent(doc.docId)}&advance=1`)
+        const sdata = (await sres.json().catch(() => null)) as { status?: string; progress?: number } | null
+        setConverting((m) => ({ ...m, [doc.docId]: Math.round((sdata?.progress ?? 0) * 100) }))
+        if (sdata?.status === 'done') {
+          setConvertedMap((m) => ({ ...m, [doc.docId]: true }))
+          showToast(t('convert.done'))
+          break
+        }
+        if (sdata?.status === 'failed') {
+          showToast(t('convert.failed'))
+          break
+        }
+      }
+    } catch {
+      showToast(t('convert.failed'))
+    }
+    setConverting((m) => { const n = { ...m }; delete n[doc.docId]; return n })
+  }, [showToast, t])
+
+  const openMenu = useCallback(async (docId: string) => {
+    setMenuFor((cur) => (cur === docId ? null : docId))
+    if (menuFor === docId) return
+    try {
+      const res = await fetch(`/api/tts/convert?docId=${encodeURIComponent(docId)}`)
+      const data = (await res.json().catch(() => null)) as { status?: string } | null
+      setConvertedMap((m) => ({ ...m, [docId]: data?.status === 'done' }))
+    } catch {
+      // 状态查询失败时保持未知，不打扰用户
+    }
+  }, [menuFor])
 
   useEffect(() => {
     void refresh()
@@ -304,7 +359,7 @@ export function LibraryView() {
                       type="button"
                       className="icon-btn"
                       aria-label={tab === 'docs' ? t('library.moreLabel', { title: doc.title }) : t('library.trashOpLabel', { title: doc.title })}
-                      onClick={() => setMenuFor(menuFor === doc.docId ? null : doc.docId)}
+                      onClick={() => void openMenu(doc.docId)}
                     >
                       <IconMore />
                     </button>
@@ -313,6 +368,23 @@ export function LibraryView() {
                     <div className="row-menu" role="menu">
                       {tab === 'docs' ? (
                         <>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            disabled={converting[doc.docId] != null}
+                            onClick={() => void convertDoc(doc)}
+                          >
+                            {converting[doc.docId] != null
+                              ? t('convert.progress', { p: converting[doc.docId] })
+                              : convertedMap[doc.docId]
+                                ? t('convert.reconvert')
+                                : t('convert.start')}
+                          </button>
+                          {convertedMap[doc.docId] && (
+                            <a role="menuitem" href={`/api/tts/convert/${encodeURIComponent(doc.docId)}/audio?download=1`} download>
+                              {t('convert.download')}
+                            </a>
+                          )}
                           <button type="button" role="menuitem" onClick={() => void startRename(doc.docId)}>
                             {t('library.rename')}
                           </button>
