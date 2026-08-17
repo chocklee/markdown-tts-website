@@ -21,14 +21,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setRate = useReaderStore((s) => s.setRate)
   const setVolume = useReaderStore((s) => s.setVolume)
   const setVoice = useReaderStore((s) => s.setVoice)
-  const setSentencePause = useReaderStore((s) => s.setSentencePause)
-  const setSentencePauseSeconds = useReaderStore((s) => s.setSentencePauseSeconds)
   const toggleSkipCode = useReaderStore((s) => s.toggleSkipCode)
   const toggleSkipTable = useReaderStore((s) => s.toggleSkipTable)
 
   const [voices, setVoices] = useState<Voice[]>([])
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null)
-  const [purchased, setPurchased] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -36,12 +33,10 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled) return
-        setPurchased(Boolean(data?.purchased))
         setCreditsBalance(typeof data?.creditsBalance === 'number' ? data.creditsBalance : null)
       })
       .catch(() => {
         if (cancelled) return
-        setPurchased(false)
         setCreditsBalance(0)
       })
     void fetch('/api/tts/voices')
@@ -176,62 +171,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           aria-label={t('reader.skipTable')}
         />
       </div>
-
-      <p className="setting-label">{t('reader.sentenceMode')}</p>
-      {purchased ? (
-        <>
-          <div className="option-row">
-            <div>
-              <div className="name">{t('reader.sentenceMode')}</div>
-              <div className="desc">{t('reader.sentenceModeDesc')}</div>
-            </div>
-            <input
-              type="checkbox"
-              className="switch"
-              checked={settings.sentencePause}
-              onChange={(e) => setSentencePause(e.target.checked)}
-              aria-label={t('reader.sentenceMode')}
-            />
-          </div>
-          {settings.sentencePause && (
-            <div className="option-row">
-              <div>
-                <div className="name">{t('reader.pauseSeconds')}</div>
-                <div className="desc">{t('reader.pauseSecondsDesc')}</div>
-              </div>
-              <select
-                value={settings.sentencePauseSeconds}
-                onChange={(e) => setSentencePauseSeconds(Number(e.target.value))}
-                aria-label={t('reader.pauseSeconds')}
-                className="speed-select"
-              >
-                {[1, 2, 3, 5, 8, 10].map((sec) => (
-                  <option key={sec} value={sec}>
-                    {t('reader.seconds', { n: sec })}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="option-row" style={{ opacity: 0.6 }}>
-            <div>
-              <div className="name">
-                {t('reader.sentenceMode')}<span className="tag-inline">{t('reader.pro')}</span>
-              </div>
-              <div className="desc">{t('reader.sentenceModeDesc')}</div>
-            </div>
-            <input type="checkbox" className="switch" disabled checked={false} aria-label={t('reader.sentenceLocked')} />
-          </div>
-          <p className="settings-hint">
-            <Link href="/#pricing" className="link">
-              {t('reader.unlockSentence')}
-            </Link>
-          </p>
-        </>
-      )}
 
       <p className="settings-hint">{t('reader.settingsHint')}</p>
       <button type="button" onClick={onClose} className="btn-secondary" style={{ width: '100%', marginTop: 14 }}>

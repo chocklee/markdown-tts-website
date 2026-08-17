@@ -20,10 +20,9 @@ type DrawerKind = 'outline' | 'settings' | 'qa' | null
 
 export function ReaderLayout({ document, docId }: { document: ReaderDocument; docId: string }) {
   const [drawer, setDrawer] = useState<DrawerKind>(null)
-  const { creditsBalance, purchased } = useAccount()
+  const { creditsBalance } = useAccount()
   const { t } = useI18n()
   const settings = useReaderStore((s) => s.settings)
-  const setSentencePause = useReaderStore((s) => s.setSentencePause)
   const setConvertedSettings = useReaderStore((s) => s.setConvertedSettings)
   const showToast = useUiStore((s) => s.showToast)
   const [converted, setConverted] = useState<{
@@ -150,7 +149,7 @@ export function ReaderLayout({ document, docId }: { document: ReaderDocument; do
     settings.rate === converted.rate &&
     settings.skipCode === converted.skipCode &&
     settings.skipTable === converted.skipTable
-  const seamless = settingsMatched && !settings.sentencePause
+  const seamless = settingsMatched
 
   useEffect(() => {
     if (!audioReady || !converted) return
@@ -166,27 +165,6 @@ export function ReaderLayout({ document, docId }: { document: ReaderDocument; do
       }
     }
   }, [audioReady, settingsMatched, converted, setConvertedSettings])
-
-  const toggleMode = useCallback(() => {
-    if (seamless) {
-      if (!purchased) {
-        setDrawer('settings')
-        return
-      }
-      setSentencePause(true)
-    } else {
-      setSentencePause(false)
-      if (converted && !settingsMatched) {
-        setConvertedSettings({
-          voice: converted.voice,
-          rate: converted.rate,
-          skipCode: converted.skipCode,
-          skipTable: converted.skipTable,
-        })
-      }
-    }
-    useReaderStore.getState().stop()
-  }, [seamless, purchased, converted, settingsMatched, setSentencePause, setConvertedSettings])
 
   const DRAWER_TITLES: Record<Exclude<DrawerKind, null>, string> = {
     outline: t('reader.outline'),
@@ -235,16 +213,6 @@ export function ReaderLayout({ document, docId }: { document: ReaderDocument; do
                   ? t('convert.reconvert')
                   : t('convert.start')}
             </button>
-            {audioReady && (
-              <button
-                type="button"
-                className="rt-btn"
-                onClick={() => void toggleMode()}
-                aria-label={seamless ? t('reader.sentenceMode') : t('reader.seamless')}
-              >
-                {seamless ? t('reader.sentenceMode') : t('reader.seamless')}
-              </button>
-            )}
           </div>
         </div>
 

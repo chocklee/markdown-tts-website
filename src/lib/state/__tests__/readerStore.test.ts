@@ -52,20 +52,6 @@ describe('readerStore', () => {
     freshStore()
   })
 
-  it('逐句模式开关与时长设置生效', () => {
-    const { store } = freshStore()
-    expect(store.settings.sentencePause).toBe(false)
-    expect(store.settings.sentencePauseSeconds).toBe(2)
-    store.setSentencePause(true)
-    store.setSentencePauseSeconds(5)
-    const state = useReaderStore.getState()
-    expect(state.settings.sentencePause).toBe(true)
-    expect(state.settings.sentencePauseSeconds).toBe(5)
-    const opts = state.getOptions()
-    expect(opts.sentencePause).toBe(true)
-    expect(opts.sentencePauseSeconds).toBe(5)
-  })
-
   it('setConvertedSettings 同步设置并重建引擎', () => {
     const { store } = freshStore()
     store.setConvertedSettings({ voice: 'nova', rate: 1.25, skipCode: false, skipTable: true })

@@ -25,7 +25,7 @@ function setup(texts: string[]) {
   const onIndex = vi.fn()
   const onEnd = vi.fn()
   const onError = vi.fn()
-  const options = { rate: 1, volume: 1, sentencePause: false, sentencePauseSeconds: 2 }
+  const options = { rate: 1, volume: 1 }
   const queue = new SpeechQueue(engine, texts, () => options, { onIndex, onEnd, onError })
   return { engine, queue, onIndex, onEnd, onError, options }
 }
@@ -64,72 +64,6 @@ describe('SpeechQueue', () => {
     queue.playFrom(0)
     queue.stop()
     expect(engine.cancelled).toBe(true)
-  })
-
-  it('逐句模式：句子播完暂停 N 秒后自动继续', () => {
-    vi.useFakeTimers()
-    try {
-      const engine = new FakeEngine()
-      const onIndex = vi.fn()
-      const queue = new SpeechQueue(
-        engine,
-        ['a。', 'b。', 'c。'],
-        () => ({ rate: 1, volume: 1, sentencePause: true, sentencePauseSeconds: 2 }),
-        { onIndex, onEnd: vi.fn(), onError: vi.fn() },
-      )
-      queue.playFrom(0)
-      engine.speakCalls[0].onend()
-      expect(onIndex).toHaveBeenCalledTimes(1)
-      vi.advanceTimersByTime(1999)
-      expect(onIndex).toHaveBeenCalledTimes(1)
-      vi.advanceTimersByTime(1)
-      expect(onIndex).toHaveBeenCalledTimes(2)
-      expect(engine.speakCalls[1].text).toBe('b。')
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('逐句暂停期间手动暂停会取消自动继续，恢复后继续下一句', () => {
-    vi.useFakeTimers()
-    try {
-      const engine = new FakeEngine()
-      const queue = new SpeechQueue(
-        engine,
-        ['a。', 'b。'],
-        () => ({ rate: 1, volume: 1, sentencePause: true, sentencePauseSeconds: 2 }),
-        { onIndex: vi.fn(), onEnd: vi.fn(), onError: vi.fn() },
-      )
-      queue.playFrom(0)
-      engine.speakCalls[0].onend()
-      queue.pause()
-      vi.advanceTimersByTime(3000)
-      expect(engine.speakCalls).toHaveLength(1)
-      queue.resume()
-      expect(engine.speakCalls).toHaveLength(2)
-      expect(engine.speakCalls[1].text).toBe('b。')
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('最后一句不进入逐句暂停，直接结束', () => {
-    vi.useFakeTimers()
-    try {
-      const engine = new FakeEngine()
-      const onEnd = vi.fn()
-      const queue = new SpeechQueue(
-        engine,
-        ['a。'],
-        () => ({ rate: 1, volume: 1, sentencePause: true, sentencePauseSeconds: 2 }),
-        { onIndex: vi.fn(), onEnd, onError: vi.fn() },
-      )
-      queue.playFrom(0)
-      engine.speakCalls[0].onend()
-      expect(onEnd).toHaveBeenCalledOnce()
-    } finally {
-      vi.useRealTimers()
-    }
   })
 
   it('朗读时读取最新 rate/volume', () => {
@@ -234,33 +168,6 @@ describe('SpeechQueue', () => {
     queue.playFrom(0)
     expect(engine.speakCalls).toHaveLength(1)
     expect(engine.prefetchCalls).toHaveLength(0)
-  })
-
-  it('逐句暂停期间不额外预取，恢复继续播放时再预取', () => {
-    vi.useFakeTimers()
-    try {
-      const engine = new FakeEngine()
-      const queue = new SpeechQueue(
-        engine,
-        ['a。', 'b。', 'c。'],
-        () => ({ rate: 1, volume: 1, sentencePause: true, sentencePauseSeconds: 2 }),
-        { onIndex: vi.fn(), onEnd: vi.fn(), onError: vi.fn() },
-      )
-      queue.playFrom(0)
-      expect(engine.prefetchCalls).toHaveLength(1)
-      expect(engine.prefetchCalls[0].text).toBe('b。')
-
-      engine.speakCalls[0].onend()
-      vi.advanceTimersByTime(1999)
-      expect(engine.prefetchCalls).toHaveLength(1)
-
-      vi.advanceTimersByTime(1)
-      expect(engine.speakCalls).toHaveLength(2)
-      expect(engine.prefetchCalls).toHaveLength(2)
-      expect(engine.prefetchCalls[1].text).toBe('c。')
-    } finally {
-      vi.useRealTimers()
-    }
   })
 
 })

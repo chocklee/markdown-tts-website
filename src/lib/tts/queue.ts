@@ -9,8 +9,6 @@ export interface SpeechCallbacks {
 export interface SpeechOptions {
   rate: number
   volume: number
-  sentencePause: boolean
-  sentencePauseSeconds: number
 }
 
 export class SpeechQueue {
@@ -19,10 +17,8 @@ export class SpeechQueue {
   private getOptions: () => SpeechOptions
   private callbacks: SpeechCallbacks
   private index = 0
-  private state: 'idle' | 'playing' | 'paused' | 'sentence-pause' = 'idle'
+  private state: 'idle' | 'playing' | 'paused' = 'idle'
   private epoch = 0
-  private pauseTimer: ReturnType<typeof setTimeout> | null = null
-  private waitingToResume = false
 
   constructor(
     engine: TtsEngine,
@@ -49,8 +45,6 @@ export class SpeechQueue {
   }
 
   playFrom(startIndex: number): void {
-    this.clearPauseTimer()
-    this.waitingToResume = false
     this.epoch += 1
     this.engine.cancel()
     this.index = startIndex
@@ -68,12 +62,6 @@ export class SpeechQueue {
   }
 
   pause(): void {
-    if (this.state === 'sentence-pause') {
-      this.clearPauseTimer()
-      this.waitingToResume = true
-      this.state = 'paused'
-      return
-    }
     if (this.state !== 'playing') return
     this.engine.pause()
     this.state = 'paused'
@@ -81,26 +69,17 @@ export class SpeechQueue {
 
   resume(): void {
     if (this.state !== 'paused') return
-    if (this.waitingToResume) {
-      this.waitingToResume = false
-      this.speakCurrent()
-      return
-    }
     this.state = 'playing'
     this.engine.resume()
   }
 
   stop(): void {
-    this.clearPauseTimer()
-    this.waitingToResume = false
     this.epoch += 1
     this.engine.cancel()
     this.state = 'idle'
   }
 
   reposition(index: number): void {
-    this.clearPauseTimer()
-    this.waitingToResume = false
     this.epoch += 1
     this.engine.cancel()
     this.index = index
@@ -122,16 +101,7 @@ export class SpeechQueue {
       onend: () => {
         if (epoch !== this.epoch) return
         this.index += 1
-        if (opts.sentencePause && this.index < this.texts.length && this.state === 'playing') {
-          this.state = 'sentence-pause'
-          this.pauseTimer = setTimeout(() => {
-            if (epoch !== this.epoch || this.state !== 'sentence-pause') return
-            this.state = 'playing'
-            this.speakCurrent()
-          }, opts.sentencePauseSeconds * 1000)
-        } else {
-          this.speakCurrent()
-        }
+        this.speakCurrent()
       },
       onerror: (error) => {
         if (epoch !== this.epoch) return
@@ -150,10 +120,4 @@ export class SpeechQueue {
     this.engine.prefetch?.(this.texts[nextIndex], { rate: opts.rate })
   }
 
-  private clearPauseTimer(): void {
-    if (this.pauseTimer !== null) {
-      clearTimeout(this.pauseTimer)
-      this.pauseTimer = null
-    }
-  }
 }

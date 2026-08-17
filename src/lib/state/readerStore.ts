@@ -29,8 +29,6 @@ interface ReaderState {
   setVolume: (volume: number) => void
   setVoice: (voice: string) => void
   setConvertedSettings: (patch: Partial<Pick<ReaderSettings, 'voice' | 'rate' | 'skipCode' | 'skipTable'>>) => void
-  setSentencePause: (enabled: boolean) => void
-  setSentencePauseSeconds: (seconds: number) => void
   toggleSkipCode: () => void
   toggleSkipTable: () => void
 }
@@ -60,8 +58,6 @@ function buildQueueWithCallbacks(engine: TtsEngine, document: ReaderDocument): S
     () => ({
       rate: useReaderStore.getState().settings.rate,
       volume: useReaderStore.getState().settings.volume,
-      sentencePause: useReaderStore.getState().settings.sentencePause,
-      sentencePauseSeconds: useReaderStore.getState().settings.sentencePauseSeconds,
     }),
     (i) => useReaderStore.setState({ currentIndex: i }),
     () => useReaderStore.setState({ isPlaying: false }),
@@ -222,8 +218,6 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     return {
       rate: s.rate,
       volume: s.volume,
-      sentencePause: s.sentencePause,
-      sentencePauseSeconds: s.sentencePauseSeconds,
     }
   },
 
@@ -243,14 +237,6 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     if (document && (next.skipCode !== settings.skipCode || next.skipTable !== settings.skipTable)) {
       get().rebuildSpeakable()
     }
-  },
-
-  setSentencePause: (enabled) => {
-    set((s) => ({ settings: { ...s.settings, sentencePause: enabled } }))
-  },
-
-  setSentencePauseSeconds: (seconds) => {
-    set((s) => ({ settings: { ...s.settings, sentencePauseSeconds: seconds } }))
   },
 
   toggleSkipCode: () => {
