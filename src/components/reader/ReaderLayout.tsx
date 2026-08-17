@@ -34,6 +34,7 @@ export function ReaderLayout({ document, docId }: { document: ReaderDocument; do
     skipTable: boolean
   } | null>(null)
   const [convertProgress, setConvertProgress] = useState<number | null>(null)
+  const [sentenceMode, setSentenceMode] = useState(false)
   const aliveRef = useRef(true)
 
   useEffect(() => () => { aliveRef.current = false }, [])
@@ -149,7 +150,12 @@ export function ReaderLayout({ document, docId }: { document: ReaderDocument; do
     settings.rate === converted.rate &&
     settings.skipCode === converted.skipCode &&
     settings.skipTable === converted.skipTable
-  const seamless = settingsMatched
+  const seamless = settingsMatched && !sentenceMode
+
+  const toggleMode = useCallback(() => {
+    setSentenceMode((prev) => !prev)
+    useReaderStore.getState().stop()
+  }, [])
 
   useEffect(() => {
     if (!audioReady || !converted) return
@@ -213,6 +219,16 @@ export function ReaderLayout({ document, docId }: { document: ReaderDocument; do
                   ? t('convert.reconvert')
                   : t('convert.start')}
             </button>
+            {audioReady && (
+              <button
+                type="button"
+                className="rt-btn"
+                onClick={() => toggleMode()}
+                aria-label={seamless ? t('reader.sentenceMode') : t('reader.seamless')}
+              >
+                {seamless ? t('reader.sentenceMode') : t('reader.seamless')}
+              </button>
+            )}
           </div>
         </div>
 

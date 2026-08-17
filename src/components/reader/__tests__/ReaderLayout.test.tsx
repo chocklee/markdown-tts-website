@@ -66,4 +66,23 @@ describe('ReaderLayout convert', () => {
       expect(screen.getByLabelText('下载音频')).toBeInTheDocument()
     })
   })
+
+  it('转换完成后默认整篇播放，可在工具栏切换逐句模式', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ status: 'done', progress: 1, voice: 'browser', rate: 1, skipCode: true, skipTable: true }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    renderReader()
+    const user = userEvent.setup()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '逐句模式' })).toBeInTheDocument()
+    })
+    expect(screen.getByRole('region', { name: '整篇播放' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '逐句模式' }))
+    expect(screen.getByRole('button', { name: '整篇播放' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '整篇播放' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '播放控制' })).toBeInTheDocument()
+  })
 })
