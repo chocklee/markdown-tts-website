@@ -1657,11 +1657,11 @@ input[type="checkbox"].switch:disabled { opacity: 0.55; cursor: default; }
   .landing-nav { display: none; }
   .landing .site-header > .site-link { flex-shrink: 0; }
   .landing .site-header > .site-link:first-of-type { margin-left: auto; }
-  .landing .site-header .brand { min-width: 0; }
+  .landing .site-header .brand { min-width: 0; flex-wrap: wrap; row-gap: 2px; }
   .landing .site-header .brand .cap {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-basis: 100%;
+    white-space: normal;
+    line-height: 1.35;
   }
   .landing-hero { padding-top: 44px; }
   .hero-title { font-size: 36px; }
