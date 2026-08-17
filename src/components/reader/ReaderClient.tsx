@@ -1,9 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { parseDocument } from '@/lib/markdown/parse'
 import { getDocument } from '@/lib/storage/library'
 import { migrateLegacyDocument } from '@/lib/library/actions'
+import { libraryUserId } from '@/lib/library/userKey'
 import { loadPosition, savePosition } from '@/lib/storage/local'
 import { useReaderStore } from '@/lib/state/readerStore'
 import { ReaderLayout } from '@/components/reader/ReaderLayout'
@@ -15,6 +17,8 @@ import type { LibraryDocument } from '@/types/document'
 export function ReaderClient({ docId }: { docId: string | null }) {
   const router = useRouter()
   const { t } = useI18n()
+  const { data: session } = useSession()
+  const userKey = libraryUserId(session)
   const [stored, setStored] = useState<LibraryDocument | null>(null)
   const [doc, setDoc] = useState<ReaderDocument | null>(null)
   const init = useReaderStore((s) => s.init)
@@ -25,13 +29,13 @@ export function ReaderClient({ docId }: { docId: string | null }) {
     async function load() {
       try {
         let found: LibraryDocument | null = null
-        if (docId) found = await getDocument(docId)
+        if (docId) found = await getDocument(userKey, docId)
         if (found?.deletedAt) {
           if (!cancelled) router.replace('/')
           return
         }
         if (!found) {
-          found = await migrateLegacyDocument()
+          found = await migrateLegacyDocument(userKey)
           if (found && !cancelled) {
             router.replace(`/reader?docId=${encodeURIComponent(found.docId)}`)
           }
@@ -52,7 +56,7 @@ export function ReaderClient({ docId }: { docId: string | null }) {
     return () => {
       cancelled = true
     }
-  }, [docId, router])
+  }, [docId, router, userKey])
 
   useEffect(() => {
     if (!stored || !doc || document?.id === doc.id) return

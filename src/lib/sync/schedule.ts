@@ -4,26 +4,26 @@ let timer: ReturnType<typeof setTimeout> | null = null
 let running = false
 let pending = false
 
-export function scheduleSync(delayMs = 2000): void {
+export function scheduleSync(userId: string, delayMs = 2000): void {
   if (timer) clearTimeout(timer)
-  timer = setTimeout(() => void flushSync(), delayMs)
+  timer = setTimeout(() => void flushSync(userId), delayMs)
 }
 
-export async function flushSync(): Promise<void> {
+export async function flushSync(userId: string): Promise<void> {
   if (running) {
     pending = true
     return
   }
   running = true
   try {
-    await runSync()
+    await runSync(userId)
   } catch {
     // 网络/登录错误静默，等待下次触发
   } finally {
     running = false
     if (pending) {
       pending = false
-      scheduleSync(0)
+      scheduleSync(userId, 0)
     }
   }
 }

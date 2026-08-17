@@ -2,14 +2,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { listDocuments, getDocument } from '@/lib/storage/library'
+import { listDocuments, getDocument, clearUserDocuments } from '@/lib/storage/library'
 import {
   renameDocument,
   softDeleteDocument,
   restoreDocument,
   removeDocumentLocally,
+  claimGuestDocuments,
   activeBytes,
 } from '@/lib/library/actions'
+import { libraryUserId } from '@/lib/library/userKey'
 import { runSync } from '@/lib/sync/manager'
 import { scheduleSync } from '@/lib/sync/schedule'
 import { useUiStore } from '@/lib/state/uiStore'
@@ -40,8 +42,9 @@ function daysLeft(expiresAt: number): number {
 }
 
 export function LibraryView() {
-  const { status } = useSession()
+  const { status, data: session } = useSession()
   const { t, lang } = useI18n()
+  const userKey = status === 'authenticated' ? libraryUserId(session) : ''
   const [docs, setDocs] = useState<LibraryDocument[]>([])
   const [tab, setTab] = useState<Tab>('docs')
   const [query, setQuery] = useState('')
@@ -54,28 +57,30 @@ export function LibraryView() {
   const [syncing, setSyncing] = useState(false)
   const syncingRef = useRef(false)
   const aliveRef = useRef(true)
+  const prevUserRef = useRef<string | null>(null)
   const showToast = useUiStore((s) => s.showToast)
 
   useEffect(() => () => { aliveRef.current = false }, [])
 
   const refresh = useCallback(async () => {
-    const all = await listDocuments()
+    if (!userKey) return
+    const all = await listDocuments(userKey)
     setDocs(all.sort((a, b) => b.updatedAt - a.updatedAt))
-  }, [])
+  }, [userKey])
 
   const sync = useCallback(async () => {
-    if (status !== 'authenticated' || syncingRef.current) return
+    if (status !== 'authenticated' || syncingRef.current || !userKey) return
     syncingRef.current = true
     setSyncing(true)
     try {
-      const result = await runSync()
+      const result = await runSync(userKey)
       if (result.error) {
         showToast(t(result.error))
       } else if (result.uploaded + result.downloaded > 0) {
         showToast(t('library.syncedToast', { up: result.uploaded, down: result.downloaded }))
       }
       if (result.quotaBytes !== null) {
-        const all = await listDocuments().catch(() => null)
+        const all = await listDocuments(userKey).catch(() => null)
         if (all) setQuota({ usedBytes: activeBytes(all), quotaBytes: result.quotaBytes })
       }
     } finally {
@@ -83,7 +88,7 @@ export function LibraryView() {
       setSyncing(false)
       await refresh().catch(() => {})
     }
-  }, [status, refresh, showToast, t])
+  }, [status, userKey, refresh, showToast, t])
 
   const convertDoc = useCallback(async (doc: LibraryDocument) => {
     aliveRef.current = true
@@ -155,19 +160,38 @@ export function LibraryView() {
   }, [refresh])
 
   useEffect(() => {
-    if (status !== 'authenticated') return
-    void sync()
+    if (status !== 'authenticated') {
+      prevUserRef.current = null
+      return
+    }
+    const prev = prevUserRef.current
+    prevUserRef.current = userKey
+    let cancelled = false
+    void (async () => {
+      if (prev === null) {
+        // 首次登录：把游客期间创建的文档归到当前账号
+        await claimGuestDocuments(userKey).catch(() => {})
+      } else if (prev !== userKey) {
+        // 切换账号：清除上一个账号的本地缓存，再同步当前账号，避免串号
+        await clearUserDocuments(prev).catch(() => {})
+        await claimGuestDocuments(userKey).catch(() => {})
+      }
+      if (cancelled) return
+      await refresh().catch(() => {})
+      await sync().catch(() => {})
+    })()
     const onOnline = () => void sync()
     window.addEventListener('online', onOnline)
     const timer = window.setInterval(() => void sync(), 60000)
     return () => {
+      cancelled = true
       window.removeEventListener('online', onOnline)
       window.clearInterval(timer)
     }
-  }, [status, sync])
+  }, [status, userKey, refresh, sync])
 
   async function startRename(docId: string) {
-    const doc = await getDocument(docId)
+    const doc = await getDocument(userKey, docId)
     if (!doc) return
     setRenaming(docId)
     setRenameValue(doc.title)
@@ -176,28 +200,28 @@ export function LibraryView() {
 
   async function confirmRename() {
     if (!renaming) return
-    await renameDocument(renaming, renameValue)
-    if (status === 'authenticated') scheduleSync()
+    await renameDocument(userKey, renaming, renameValue)
+    if (status === 'authenticated') scheduleSync(userKey)
     setRenaming(null)
     await refresh()
   }
 
   async function remove(docId: string) {
-    await softDeleteDocument(docId)
-    if (status === 'authenticated') scheduleSync()
+    await softDeleteDocument(userKey, docId)
+    if (status === 'authenticated') scheduleSync(userKey)
     setMenuFor(null)
     await refresh()
   }
 
   async function doRestore(docId: string) {
-    await restoreDocument(docId)
-    if (status === 'authenticated') scheduleSync()
+    await restoreDocument(userKey, docId)
+    if (status === 'authenticated') scheduleSync(userKey)
     setMenuFor(null)
     await refresh()
   }
 
   async function doPurge(docId: string) {
-    await removeDocumentLocally(docId)
+    await removeDocumentLocally(userKey, docId)
     if (status === 'authenticated') {
       await fetch(`/api/documents/${encodeURIComponent(docId)}`, { method: 'DELETE' }).catch(() => {})
     }

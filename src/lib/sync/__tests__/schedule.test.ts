@@ -17,8 +17,8 @@ describe('scheduleSync', () => {
   })
 
   it('debounce: 连续调用多次只执行一次', async () => {
-    scheduleSync(100)
-    scheduleSync(100)
+    scheduleSync('user-1', 100)
+    scheduleSync('user-1', 100)
     await vi.advanceTimersByTimeAsync(100)
     expect(runSync).toHaveBeenCalledTimes(1)
   })
@@ -30,8 +30,8 @@ describe('scheduleSync', () => {
     })
     vi.mocked(runSync).mockReturnValueOnce(gate as never)
 
-    const first = flushSync()
-    const second = flushSync()
+    const first = flushSync('user-1')
+    const second = flushSync('user-1')
     expect(runSync).toHaveBeenCalledTimes(1)
 
     resolveFirst()
@@ -43,7 +43,7 @@ describe('scheduleSync', () => {
   })
 
   it('cancelScheduledSync: 取消后不再执行', async () => {
-    scheduleSync(100)
+    scheduleSync('user-1', 100)
     cancelScheduledSync()
     await vi.advanceTimersByTimeAsync(200)
     expect(runSync).not.toHaveBeenCalled()

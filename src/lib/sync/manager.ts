@@ -10,7 +10,7 @@ export interface SyncResult {
   quotaBytes: number | null
 }
 
-export async function runSync(): Promise<SyncResult> {
+export async function runSync(userId: string): Promise<SyncResult> {
   let quotaBytes: number | null = null
   let uploaded = 0
   let downloaded = 0
@@ -28,7 +28,7 @@ export async function runSync(): Promise<SyncResult> {
     const data = (await res.json()) as { quotaBytes: number; docs: SyncedDocument[] }
     quotaBytes = data.quotaBytes
 
-    const local = await listDocuments()
+    const local = await listDocuments(userId)
     const plan = computeSyncPlan(local, data.docs)
 
     for (const doc of plan.uploads) {
@@ -47,7 +47,7 @@ export async function runSync(): Promise<SyncResult> {
         const body = (await putRes.json().catch(() => null)) as { server?: SyncedDocument } | null
         conflicted += 1
         if (body?.server) {
-          await putDocument({ ...body.server, dirty: false })
+          await putDocument(userId, { ...body.server, dirty: false })
           downloaded += 1
         }
         continue
@@ -56,17 +56,17 @@ export async function runSync(): Promise<SyncResult> {
         failed += 1
         continue
       }
-      await putDocument({ ...doc, dirty: false })
+      await putDocument(userId, { ...doc, dirty: false })
       uploaded += 1
     }
 
     for (const doc of plan.downloads) {
-      await putDocument({ ...doc, dirty: false })
+      await putDocument(userId, { ...doc, dirty: false })
       downloaded += 1
     }
 
     for (const docId of plan.removals) {
-      await deleteDocument(docId)
+      await deleteDocument(userId, docId)
     }
   } catch {
     return { uploaded, downloaded, conflicted, error: 'library.syncNetwork', quotaBytes }

@@ -13,6 +13,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn() }),
 }))
 
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ status: 'unauthenticated', data: null }),
+}))
+
 vi.mock('@/lib/sync/schedule', () => ({
   scheduleSync: vi.fn(),
 }))
@@ -29,8 +33,8 @@ describe('InputSection', () => {
     pushMock.mockClear()
     vi.mocked(saveDocumentToLibrary).mockClear()
     localStorage.clear()
-    for (const doc of await listDocuments()) {
-      await deleteDocument(doc.docId)
+    for (const doc of await listDocuments('')) {
+      await deleteDocument('', doc.docId)
     }
   })
 
@@ -46,7 +50,7 @@ describe('InputSection', () => {
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith(expect.stringMatching(/^\/reader\?docId=/))
     )
-    const docs = await listDocuments()
+    const docs = await listDocuments('')
     expect(docs).toHaveLength(1)
     expect(docs[0].title).toBe('我的笔记')
   })
@@ -90,7 +94,7 @@ describe('InputSection', () => {
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith(expect.stringMatching(/^\/reader\?docId=/))
     )
-    const docs = await listDocuments()
+    const docs = await listDocuments('')
     expect(docs).toHaveLength(1)
     expect(docs[0].title).toBe('文件标题')
   })

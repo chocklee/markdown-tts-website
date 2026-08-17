@@ -13,6 +13,7 @@ import { IconChevron } from '@/components/app/icons'
 import { clearPosition } from '@/lib/storage/local'
 import { listDocuments } from '@/lib/storage/library'
 import { activeBytes } from '@/lib/library/actions'
+import { libraryUserId } from '@/lib/library/userKey'
 
 interface PackageInfo {
   id: string
@@ -191,10 +192,10 @@ function ProfileContent() {
   const [usedBytes, setUsedBytes] = useState<number | null>(null)
 
   useEffect(() => {
-    void listDocuments()
+    void listDocuments(libraryUserId(session))
       .then((all) => setUsedBytes(activeBytes(all)))
       .catch(() => {})
-  }, [])
+  }, [session])
 
   return (
     <AppShell nav="profile">
