@@ -87,6 +87,7 @@ function ProfileContent() {
   const [items, setItems] = useState<Transaction[]>([])
   const [cacheBytes, setCacheBytes] = useState(0)
   const [selected, setSelected] = useState<PackageInfo | null>(null)
+  const [chosenId, setChosenId] = useState<string>('light')
   const [busy, setBusy] = useState(false)
 
   const skipCode = useReaderStore((s) => s.settings.skipCode)
@@ -142,17 +143,19 @@ function ProfileContent() {
   const email = session?.user?.email ?? null
 
   const openBuy = useCallback((pkg: PackageInfo) => {
+    setChosenId(pkg.id)
     setSelected(pkg)
   }, [])
 
   const confirmBuy = useCallback(async () => {
-    if (!selected) return
+    const pkg = packages.find((p) => p.id === chosenId)
+    if (!pkg) return
     setBusy(true)
     try {
       const res = await fetch('/api/credits/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId: selected.id }),
+        body: JSON.stringify({ packageId: pkg.id }),
       })
       const data = (await res.json()) as { url?: string; error?: string }
       if (res.ok && data.url) {
@@ -165,7 +168,7 @@ function ProfileContent() {
     } finally {
       setBusy(false)
     }
-  }, [selected, showToast])
+  }, [chosenId, packages, showToast])
 
   const clearCache = useCallback(() => {
     clearPosition()
@@ -222,7 +225,12 @@ function ProfileContent() {
                   className="btn-primary"
                   style={{ marginTop: 16, width: '100%' }}
                   onClick={() => {
-                    if (midPackage) openBuy(midPackage)
+                    const current =
+                      balance.subscription?.status === 'active' && balance.subscription.planId
+                        ? packages.find((p) => p.id === balance.subscription?.planId)
+                        : undefined
+                    const target = current ?? midPackage
+                    if (target) openBuy(target)
                     else router.push('/#pricing')
                   }}
                 >
@@ -350,9 +358,29 @@ function ProfileContent() {
         <div className="modal-overlay show">
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
             <h3 id="m-title">订阅套餐</h3>
-            <p className="m-sub">{selected.name}</p>
-            <p className="m-price num">${selected.usd.toFixed(2)}<span className="unit" style={{ fontSize: 14, color: 'var(--muted)' }}>/月</span></p>
-            <p className="m-note">{selected.credits} 积分/月 · 每月自动续费 · 剩余积分到期清零</p>
+            <p className="m-sub">选择要订阅的套餐 · 每月自动续费 · 剩余积分到期清零</p>
+            <div className="m-plans">
+              {packages.map((pkg) => {
+                const chosen = pkg.id === chosenId
+                const isCurrent = balance.subscription?.status === 'active' && balance.subscription.planId === pkg.id
+                return (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    className={`m-plan${chosen ? ' chosen' : ''}`}
+                    aria-pressed={chosen}
+                    onClick={() => setChosenId(pkg.id)}
+                  >
+                    <span className="m-plan-name">
+                      {pkg.name}
+                      {isCurrent && <span className="tag-inline">当前</span>}
+                    </span>
+                    <span className="m-plan-credits">{pkg.credits} 积分/月</span>
+                    <span className="m-plan-price num">${pkg.usd.toFixed(2)}/月</span>
+                  </button>
+                )
+              })}
+            </div>
             <div className="m-actions">
               <button type="button" className="btn-secondary" onClick={() => setSelected(null)} disabled={busy}>
                 取消
