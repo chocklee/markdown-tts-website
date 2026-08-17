@@ -2,8 +2,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import AuthShell from '@/components/app/AuthShell'
+import { useI18n } from '@/lib/i18n'
 
 export default function ForgotPasswordPage() {
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
@@ -24,24 +26,24 @@ export default function ForgotPasswordPage() {
         return
       }
       const data = (await res.json().catch(() => ({}))) as { error?: string }
-      setError(data.error ?? '发送失败，请稍后再试')
+      setError(data.error ?? t('auth.forgotGeneric'))
     } catch {
-      setError('网络错误，请重试')
+      setError(t('auth.networkError'))
     } finally {
       setSending(false)
     }
   }
 
   return (
-    <AuthShell title="忘记密码" subtitle="输入注册邮箱，我们会发送重置链接">
+    <AuthShell title={t('auth.forgotTitle')} subtitle={t('auth.forgotSub')}>
       {sent ? (
         <div className="auth-result">
-          <p>如果该邮箱已注册，重置邮件已发送，请查收。</p>
+          <p>{t('auth.forgotSent')}</p>
         </div>
       ) : (
         <form onSubmit={submit} className="auth-form">
           <label htmlFor="email" className="auth-label">
-            注册邮箱
+            {t('auth.forgotEmailLabel')}
           </label>
           <input
             id="email"
@@ -58,19 +60,13 @@ export default function ForgotPasswordPage() {
               {error}
             </p>
           )}
-          <button
-            type="submit"
-            disabled={sending}
-            className="btn-primary auth-submit"
-          >
-            发送重置邮件
+          <button type="submit" disabled={sending} className="btn-primary auth-submit">
+            {t('auth.forgotSend')}
           </button>
         </form>
       )}
       <div className="auth-links">
-        <Link href="/login">
-          返回登录
-        </Link>
+        <Link href="/login">{t('auth.forgotBack')}</Link>
       </div>
     </AuthShell>
   )

@@ -7,6 +7,7 @@ import { flattenInline, groupLeavesIntoSentences, type StyledLeaf } from '@/lib/
 import { plainText } from '@/lib/markdown/inline'
 import { sanitizeUrl } from '@/lib/security/url'
 import { useReaderStore } from '@/lib/state/readerStore'
+import { useI18n } from '@/lib/i18n'
 
 function InlineParts({ parts }: { parts: StyledLeaf[] }) {
   return (
@@ -41,6 +42,7 @@ function BlockContent({
   skipCode: boolean
   skipTable: boolean
 }) {
+  const { t } = useI18n()
   let idIndex = 0
   const consumeId = () => {
     const id = block.sentenceIds[idIndex]
@@ -85,7 +87,7 @@ function BlockContent({
       return <blockquote>{renderInline(block.node)}</blockquote>
     case 'code':
       if (skipCode) {
-        return <p className="skipped">已跳过代码块，可在朗读设置中开启</p>
+        return <p className="skipped">{t('reader.skippedCode')}</p>
       }
       return (
         <pre data-sent-block={block.sentenceIds.join(' ')}>
@@ -96,7 +98,7 @@ function BlockContent({
       const node = block.node
       if (node.type !== 'table') return null
       if (skipTable) {
-        return <p className="skipped">已跳过表格，可在朗读设置中开启</p>
+        return <p className="skipped">{t('reader.skippedTable')}</p>
       }
       return (
         <div data-sent-block={block.sentenceIds.join(' ')} className="table-wrap">

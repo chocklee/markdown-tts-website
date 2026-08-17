@@ -2,9 +2,11 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { useI18n } from '@/lib/i18n'
 import AuthShell from '@/components/app/AuthShell'
 
 function ResetPasswordPage() {
+  const { t } = useI18n()
   const searchParams = useSearchParams()
   const token = searchParams.get('token') ?? ''
   const [password, setPassword] = useState('')
@@ -27,9 +29,9 @@ function ResetPasswordPage() {
         return
       }
       const data = (await res.json().catch(() => ({}))) as { error?: string }
-      setError(data.error ?? '重置失败，请重试')
+      setError(data.error ?? t('auth.resetGeneric'))
     } catch {
-      setError('网络错误，请重试')
+      setError(t('auth.networkError'))
     } finally {
       setSaving(false)
     }
@@ -37,10 +39,10 @@ function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthShell title="重置链接无效" subtitle="请重新发起忘记密码来获取新的重置链接">
+      <AuthShell title={t('auth.resetInvalidTitle')} subtitle={t('auth.resetInvalidSub')}>
         <div className="auth-result">
           <Link href="/forgot-password" className="btn-primary auth-submit auth-link-btn">
-            重新发送
+            {t('auth.resetResend')}
           </Link>
         </div>
       </AuthShell>
@@ -48,18 +50,18 @@ function ResetPasswordPage() {
   }
 
   return (
-    <AuthShell title="设置新密码" subtitle="为你的账号设置一个新密码">
+    <AuthShell title={t('auth.resetTitle')} subtitle={t('auth.resetSub')}>
       {done ? (
         <div className="auth-result">
-          <p>密码已更新，现在可以用新密码登录了。</p>
+          <p>{t('auth.resetDone')}</p>
           <Link href="/login" className="btn-primary auth-submit auth-link-btn">
-            去登录
+            {t('auth.resetGoLogin')}
           </Link>
         </div>
       ) : (
         <form onSubmit={submit} className="auth-form">
           <label htmlFor="password" className="auth-label">
-            新密码（至少 8 位）
+            {t('auth.resetLabel')}
           </label>
           <input
             id="password"
@@ -76,12 +78,8 @@ function ResetPasswordPage() {
               {error}
             </p>
           )}
-          <button
-            type="submit"
-            disabled={saving}
-            className="btn-primary auth-submit"
-          >
-            保存新密码
+          <button type="submit" disabled={saving} className="btn-primary auth-submit">
+            {t('auth.resetSave')}
           </button>
         </form>
       )}
@@ -90,12 +88,13 @@ function ResetPasswordPage() {
 }
 
 export default function ResetPasswordPageWrapper() {
+  const { t } = useI18n()
   return (
     <Suspense
       fallback={
-        <AuthShell title="设置新密码">
+        <AuthShell title={t('auth.resetTitle')}>
           <p className="auth-result" style={{ color: 'var(--muted)' }}>
-            加载中…
+            {t('transactions.loading')}
           </p>
         </AuthShell>
       }

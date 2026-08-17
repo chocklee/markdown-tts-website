@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { parseDocument } from '@/lib/markdown/parse'
 import { saveDocumentToLibrary } from '@/lib/library/actions'
 import { scheduleSync } from '@/lib/sync/schedule'
+import { useI18n } from '@/lib/i18n'
 import { IconUpload, IconClose } from '@/components/app/icons'
 
 const MAX_SIZE = 5 * 1024 * 1024
@@ -14,6 +15,7 @@ function byteLength(s: string): number {
 
 export default function InputSection() {
   const router = useRouter()
+  const { t } = useI18n()
   const fileRef = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
   const [fileName, setFileName] = useState('')
@@ -27,11 +29,11 @@ export default function InputSection() {
     if (!file) return
     setError('')
     if (file.size > MAX_SIZE) {
-      setError('文件超过 5MB 上限')
+      setError(t('newDoc.errTooLarge'))
       return
     }
     if (!/\.md$/i.test(file.name) && file.type !== 'text/markdown' && file.type !== 'text/plain') {
-      setError('请选择 Markdown 或文本文件')
+      setError(t('newDoc.errType'))
       return
     }
     setFileName(file.name.replace(/\.[^.]*$/, ''))
@@ -46,7 +48,7 @@ export default function InputSection() {
     }
     reader.onerror = () => {
       if (readingFileRef.current !== file) return
-      setError('文件读取失败')
+      setError(t('newDoc.errRead'))
       setReading(false)
     }
     reader.readAsText(file, 'utf-8')
@@ -64,26 +66,26 @@ export default function InputSection() {
   async function start() {
     if (saving) return
     if (reading) {
-      setError('文件读取中，请稍候')
+      setError(t('newDoc.errReading'))
       return
     }
     const content = text.trim()
     if (!content) {
-      setError('请粘贴内容或选择文件')
+      setError(t('newDoc.errEmpty'))
       return
     }
     if (byteLength(content) > MAX_SIZE) {
-      setError('内容超过 5MB 上限')
+      setError(t('newDoc.errContentLarge'))
       return
     }
     setSaving(true)
     try {
-      const doc = parseDocument(content, fileName || '未命名文档')
+      const doc = parseDocument(content, fileName || t('newDoc.untitled'))
       const stored = await saveDocumentToLibrary({ title: doc.title, content })
       scheduleSync()
       router.push(`/reader?docId=${encodeURIComponent(stored.docId)}`)
     } catch {
-      setError('保存失败，请重试')
+      setError(t('newDoc.errSave'))
     } finally {
       setSaving(false)
     }
@@ -92,16 +94,16 @@ export default function InputSection() {
   return (
     <div className="new-wrap">
       <div className="card new-card">
-        <p className="new-label">粘贴 Markdown</p>
+        <p className="new-label">{t('newDoc.pasteLabel')}</p>
         <textarea
-          aria-label="Markdown 内容"
+          aria-label={t('newDoc.pasteLabel')}
           className="new-textarea"
-          placeholder="在这里粘贴 Markdown 内容，支持标题、列表、引用等语法…"
+          placeholder={t('newDoc.textareaPlaceholder')}
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
 
-        <div className="new-divider">或上传文件</div>
+        <div className="new-divider">{t('newDoc.orUpload')}</div>
 
         <input
           ref={fileRef}
@@ -117,9 +119,9 @@ export default function InputSection() {
             </span>
             <div className="body">
               <div className="title">{fileLabel}</div>
-              <div className="sub">{reading ? '正在读取文件…' : '文件已读取，可以直接开始收听'}</div>
+              <div className="sub">{reading ? t('newDoc.reading') : t('newDoc.fileRead')}</div>
             </div>
-            <button type="button" className="icon-btn" aria-label="移除文件" onClick={clearFile}>
+            <button type="button" className="icon-btn" aria-label={t('newDoc.removeFile')} onClick={clearFile}>
               <IconClose />
             </button>
           </div>
@@ -133,17 +135,17 @@ export default function InputSection() {
             }}
           >
             <IconUpload />
-            <span className="t">选择 .md 文件</span>
-            <span className="s">支持 Markdown 与纯文本，不超过 5MB</span>
+            <span className="t">{t('newDoc.chooseFile')}</span>
+            <span className="s">{t('newDoc.chooseFileSub')}</span>
           </button>
         )}
 
         {error && <p className="new-error">{error}</p>}
 
         <div className="new-actions">
-          <span className="meta">保存后自动进入朗读页面</span>
+          <span className="meta">{t('newDoc.autoEnter')}</span>
           <button type="button" className="btn-primary" disabled={saving || reading} onClick={() => void start()}>
-            {saving ? '保存中…' : '开始收听'}
+            {saving ? t('newDoc.saving') : t('newDoc.start')}
           </button>
         </div>
       </div>

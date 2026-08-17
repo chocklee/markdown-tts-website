@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithI18n } from '@/test-utils/i18n'
 import userEvent from '@testing-library/user-event'
 import { PlaybackBar } from '../PlaybackBar'
 import { parseDocument } from '@/lib/markdown/parse'
@@ -27,7 +28,7 @@ describe('PlaybackBar', () => {
     const nextSentence = vi.spyOn(useReaderStore.getState(), 'nextSentence')
     seedState()
     const user = userEvent.setup()
-    render(<PlaybackBar />)
+    renderWithI18n(<PlaybackBar />)
     await user.click(screen.getByLabelText('下一句'))
     expect(nextSentence).toHaveBeenCalled()
   })
@@ -36,14 +37,14 @@ describe('PlaybackBar', () => {
     const togglePlay = vi.spyOn(useReaderStore.getState(), 'togglePlay')
     seedState()
     const user = userEvent.setup()
-    render(<PlaybackBar />)
+    renderWithI18n(<PlaybackBar />)
     await user.click(screen.getByLabelText('播放'))
     expect(togglePlay).toHaveBeenCalled()
   })
 
   it('有章节时上一章/下一章可用，显示进度', () => {
     seedState({ currentIndex: 2 })
-    render(<PlaybackBar />)
+    renderWithI18n(<PlaybackBar />)
     expect(screen.getByLabelText('上一章')).toBeEnabled()
     expect(screen.getByLabelText('下一章')).toBeEnabled()
     expect(screen.getByText('3 / 4 句')).toBeInTheDocument()
@@ -51,7 +52,7 @@ describe('PlaybackBar', () => {
 
   it('无章节时上一章/下一章禁用', () => {
     seedState({ document: parseDocument('只有一段。') })
-    render(<PlaybackBar />)
+    renderWithI18n(<PlaybackBar />)
     expect(screen.getByLabelText('上一章')).toBeDisabled()
     expect(screen.getByLabelText('下一章')).toBeDisabled()
   })

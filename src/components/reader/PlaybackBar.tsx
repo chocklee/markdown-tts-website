@@ -1,6 +1,7 @@
 'use client'
 import { useRef } from 'react'
 import { useReaderStore } from '@/lib/state/readerStore'
+import { useI18n } from '@/lib/i18n'
 import { IconPlay, IconPause } from '@/components/app/icons'
 
 function formatRate(rate: number): string {
@@ -8,6 +9,7 @@ function formatRate(rate: number): string {
 }
 
 export function PlaybackBar() {
+  const { t } = useI18n()
   const isPlaying = useReaderStore((s) => s.isPlaying)
   const currentIndex = useReaderStore((s) => s.currentIndex)
   const speakableIds = useReaderStore((s) => s.speakableIds)
@@ -43,12 +45,12 @@ export function PlaybackBar() {
   }
 
   return (
-    <div className="player" role="region" aria-label="播放控制">
+    <div className="player" role="region" aria-label={t('reader.playerLabel')}>
       <div
         ref={trackRef}
         className="p-track"
         role="slider"
-        aria-label="播放进度"
+        aria-label={t('reader.progressLabel')}
         aria-valuemin={1}
         aria-valuemax={Math.max(total, 1)}
         aria-valuenow={currentIndex + 1}
@@ -74,11 +76,11 @@ export function PlaybackBar() {
 
       <div className="p-times">
         <span>
-          {currentIndex + 1} / {total} 句
+          {currentIndex + 1} / {t('reader.sentences', { n: total })}
         </span>
         <span>
           {formatRate(settings.rate)}x
-          {currentChapter ? ` · 第 ${chapterIndex + 1} 章 · ${currentChapter.title}` : ' · 全文'}
+          {currentChapter ? ` · ${t('reader.chapterOf', { n: chapterIndex + 1 })} · ${currentChapter.title}` : ` · ${t('reader.fullDoc')}`}
         </span>
       </div>
 
@@ -86,30 +88,30 @@ export function PlaybackBar() {
         <div className="p-info">
           <div className="t">{document?.title ?? ''}</div>
           <div className="m">
-            {isPlaying ? '正在朗读' : '已暂停'}
+            {isPlaying ? t('reader.playing') : t('reader.paused')}
             {currentChapter ? ` · ${currentChapter.title}` : ''}
           </div>
         </div>
         <div className="p-controls">
-          <button type="button" className="c-btn" onClick={prevChapter} disabled={!hasChapters} aria-label="上一章">
+          <button type="button" className="c-btn" onClick={prevChapter} disabled={!hasChapters} aria-label={t('reader.prevChapter')}>
             <svg viewBox="0 0 24 24" aria-hidden>
               <path d="M18 6v12M6 12l10-6v12z" />
             </svg>
           </button>
-          <button type="button" className="c-btn" onClick={prevSentence} disabled={currentIndex === 0} aria-label="上一句">
+          <button type="button" className="c-btn" onClick={prevSentence} disabled={currentIndex === 0} aria-label={t('reader.prevSentence')}>
             <svg viewBox="0 0 24 24" aria-hidden>
               <path d="M15 6l-6 6 6 6" />
             </svg>
           </button>
-          <button type="button" className="c-btn play" onClick={togglePlay} aria-label={isPlaying ? '暂停' : '播放'}>
+          <button type="button" className="c-btn play" onClick={togglePlay} aria-label={isPlaying ? t('reader.pause') : t('reader.play')}>
             {isPlaying ? <IconPause /> : <IconPlay />}
           </button>
-          <button type="button" className="c-btn" onClick={nextSentence} disabled={currentIndex >= total - 1} aria-label="下一句">
+          <button type="button" className="c-btn" onClick={nextSentence} disabled={currentIndex >= total - 1} aria-label={t('reader.nextSentence')}>
             <svg viewBox="0 0 24 24" aria-hidden>
               <path d="M9 6l6 6-6 6" />
             </svg>
           </button>
-          <button type="button" className="c-btn" onClick={nextChapter} disabled={!hasChapters} aria-label="下一章">
+          <button type="button" className="c-btn" onClick={nextChapter} disabled={!hasChapters} aria-label={t('reader.nextChapter')}>
             <svg viewBox="0 0 24 24" aria-hidden>
               <path d="M6 6v12M18 12L8 6v12z" />
             </svg>

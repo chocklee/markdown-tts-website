@@ -2,6 +2,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { useReaderStore } from '@/lib/state/readerStore'
+import { useI18n } from '@/lib/i18n'
 import { IconCheck } from '@/components/app/icons'
 
 function formatRate(rate: number): string {
@@ -15,6 +16,7 @@ interface Voice {
 }
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n()
   const settings = useReaderStore((s) => s.settings)
   const setRate = useReaderStore((s) => s.setRate)
   const setVolume = useReaderStore((s) => s.setVolume)
@@ -57,11 +59,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
   const cloudLocked = creditsBalance !== null && creditsBalance <= 0
   const voiceRows: { id: string; name: string; desc: string }[] = [
-    { id: 'browser', name: '浏览器语音', desc: '免费 · 本机合成' },
+    { id: 'browser', name: t('reader.browserVoice'), desc: t('reader.browserVoiceDesc') },
     ...voices.map((v) => ({
       id: v.id,
       name: v.name,
-      desc: v.description ?? '云端 AI 音色',
+      desc: v.description ?? t('reader.cloudVoiceDesc'),
     })),
   ]
 
@@ -71,9 +73,9 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div>
       <p className="setting-label" style={{ marginTop: 0 }}>
-        音色
+        {t('reader.voice')}
       </p>
-      <div role="radiogroup" aria-label="音色选择">
+      <div role="radiogroup" aria-label={t('reader.voice')}>
         {voiceRows.map((v) => {
           const locked = v.id !== 'browser' && cloudLocked
           const sel = settings.voice === v.id
@@ -99,7 +101,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             >
               <div>
                 <div className="name">{v.name}</div>
-                <div className="desc">{locked ? '需积分解锁 · ' : ''}{v.desc}</div>
+                <div className="desc">{locked ? `${t('reader.lockedHint')} · ` : ''}{v.desc}</div>
               </div>
               <span className="check">
                 <IconCheck />
@@ -110,14 +112,14 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       </div>
       {cloudLocked && (
         <p className="settings-hint">
-          余额不足，云音色需积分解锁。
+          {t('reader.noCreditsHint')}
           <Link href="/#pricing" className="link">
-            购买积分后使用云音色
+            {t('reader.buyCredits')}
           </Link>
         </p>
       )}
 
-      <p className="setting-label">语速</p>
+      <p className="setting-label">{t('reader.rate')}</p>
       <div className="speed-row">
         <input
           type="range"
@@ -126,13 +128,13 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           step={0.25}
           value={settings.rate}
           onChange={(e) => setRate(Number(e.target.value))}
-          aria-label="语速"
+          aria-label={t('reader.rate')}
           style={{ '--fill': rateFill } as CSSProperties}
         />
         <span className="val">{formatRate(settings.rate)}x</span>
       </div>
 
-      <p className="setting-label">音量</p>
+      <p className="setting-label">{t('reader.volume')}</p>
       <div className="speed-row">
         <input
           type="range"
@@ -141,71 +143,71 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           step={0.05}
           value={settings.volume}
           onChange={(e) => setVolume(Number(e.target.value))}
-          aria-label="音量"
+          aria-label={t('reader.volume')}
           style={{ '--fill': volumeFill } as CSSProperties}
         />
         <span className="val">{Math.round(settings.volume * 100)}%</span>
       </div>
 
-      <p className="setting-label">朗读</p>
+      <p className="setting-label">{t('reader.reading')}</p>
       <div className="option-row">
         <div>
-          <div className="name">跳过代码块</div>
-          <div className="desc">朗读时跳过代码片段</div>
+          <div className="name">{t('reader.skipCode')}</div>
+          <div className="desc">{t('reader.skipCodeDesc')}</div>
         </div>
         <input
           type="checkbox"
           className="switch"
           checked={settings.skipCode}
           onChange={toggleSkipCode}
-          aria-label="跳过代码块"
+          aria-label={t('reader.skipCode')}
         />
       </div>
       <div className="option-row">
         <div>
-          <div className="name">跳过表格</div>
-          <div className="desc">朗读时跳过表格内容</div>
+          <div className="name">{t('reader.skipTable')}</div>
+          <div className="desc">{t('reader.skipTableDesc')}</div>
         </div>
         <input
           type="checkbox"
           className="switch"
           checked={settings.skipTable}
           onChange={toggleSkipTable}
-          aria-label="跳过表格"
+          aria-label={t('reader.skipTable')}
         />
       </div>
 
-      <p className="setting-label">逐句模式</p>
+      <p className="setting-label">{t('reader.sentenceMode')}</p>
       {purchased ? (
         <>
           <div className="option-row">
             <div>
-              <div className="name">逐句模式</div>
-              <div className="desc">每句朗读后暂停，便于思考</div>
+              <div className="name">{t('reader.sentenceMode')}</div>
+              <div className="desc">{t('reader.sentenceModeDesc')}</div>
             </div>
             <input
               type="checkbox"
               className="switch"
               checked={settings.sentencePause}
               onChange={(e) => setSentencePause(e.target.checked)}
-              aria-label="逐句模式"
+              aria-label={t('reader.sentenceMode')}
             />
           </div>
           {settings.sentencePause && (
             <div className="option-row">
               <div>
-                <div className="name">暂停时长</div>
-                <div className="desc">每句结束后等待的秒数</div>
+                <div className="name">{t('reader.pauseSeconds')}</div>
+                <div className="desc">{t('reader.pauseSecondsDesc')}</div>
               </div>
               <select
                 value={settings.sentencePauseSeconds}
                 onChange={(e) => setSentencePauseSeconds(Number(e.target.value))}
-                aria-label="暂停时长"
+                aria-label={t('reader.pauseSeconds')}
                 className="speed-select"
               >
-                {[1, 2, 3, 5, 8, 10].map((s) => (
-                  <option key={s} value={s}>
-                    {s} 秒
+                {[1, 2, 3, 5, 8, 10].map((sec) => (
+                  <option key={sec} value={sec}>
+                    {t('reader.seconds', { n: sec })}
                   </option>
                 ))}
               </select>
@@ -217,23 +219,23 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <div className="option-row" style={{ opacity: 0.6 }}>
             <div>
               <div className="name">
-                逐句模式<span className="tag-inline">Pro</span>
+                {t('reader.sentenceMode')}<span className="tag-inline">{t('reader.pro')}</span>
               </div>
-              <div className="desc">每句朗读后暂停，便于思考</div>
+              <div className="desc">{t('reader.sentenceModeDesc')}</div>
             </div>
-            <input type="checkbox" className="switch" disabled checked={false} aria-label="逐句模式（未解锁）" />
+            <input type="checkbox" className="switch" disabled checked={false} aria-label={t('reader.sentenceLocked')} />
           </div>
           <p className="settings-hint">
             <Link href="/#pricing" className="link">
-              购买后解锁逐句模式
+              {t('reader.unlockSentence')}
             </Link>
           </p>
         </>
       )}
 
-      <p className="settings-hint">语速与音量在下一句生效；切换跳过选项会停止播放。</p>
+      <p className="settings-hint">{t('reader.settingsHint')}</p>
       <button type="button" onClick={onClose} className="btn-secondary" style={{ width: '100%', marginTop: 14 }}>
-        完成
+        {t('reader.done')}
       </button>
     </div>
   )

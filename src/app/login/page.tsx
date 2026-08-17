@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn, getProviders } from 'next-auth/react'
+import { useI18n } from '@/lib/i18n'
 import AuthShell from '@/components/app/AuthShell'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -26,13 +28,13 @@ export default function LoginPage() {
     try {
       const res = await signIn('credentials', { redirect: false, email, password })
       if (res?.error) {
-        setError('邮箱或密码错误；未验证的邮箱请先完成邮件验证')
+        setError(t('auth.loginError'))
         return
       }
       router.push('/')
       router.refresh()
     } catch {
-      setError('网络错误，请重试')
+      setError(t('auth.networkError'))
     }
   }
 
@@ -45,17 +47,17 @@ export default function LoginPage() {
         body: JSON.stringify({ email }),
       })
       if (res.ok) setResendSent(true)
-      else setResendError('发送失败，请稍后再试')
+      else setResendError(t('auth.resendFailed'))
     } catch {
-      setResendError('发送失败，请稍后再试')
+      setResendError(t('auth.resendFailed'))
     }
   }
 
   return (
-    <AuthShell title="欢迎回来" subtitle="登录后同步文库、积分与高级音色">
+    <AuthShell title={t('auth.welcomeTitle')} subtitle={t('auth.welcomeSub')}>
       <form onSubmit={submit} className="auth-form">
         <label htmlFor="email" className="auth-label">
-          邮箱
+          {t('auth.email')}
         </label>
         <input
           id="email"
@@ -68,7 +70,7 @@ export default function LoginPage() {
           className="auth-field"
         />
         <label htmlFor="password" className="auth-label">
-          密码
+          {t('auth.password')}
         </label>
         <input
           id="password"
@@ -85,11 +87,11 @@ export default function LoginPage() {
           </p>
         )}
         <button type="submit" className="btn-primary auth-submit">
-          登录
+          {t('auth.login')}
         </button>
       </form>
 
-      <div className="auth-divider">或</div>
+      <div className="auth-divider">{t('auth.or')}</div>
 
       {hasGoogle && (
         <button
@@ -115,13 +117,13 @@ export default function LoginPage() {
               d="M12 4.77c1.76 0 3.34.61 4.58 1.8l3.44-3.44A11.98 11.98 0 0 0 1.29 6.62l3.98 3.09C6.22 6.88 8.87 4.77 12 4.77z"
             />
           </svg>
-          使用 Google 登录
+          {t('auth.google')}
         </button>
       )}
 
       <div className="auth-links">
-        <Link href="/forgot-password">忘记密码？</Link>
-        <Link href="/register">注册新账号</Link>
+        <Link href="/forgot-password">{t('auth.forgot')}</Link>
+        <Link href="/register">{t('auth.registerLink')}</Link>
       </div>
 
       {error && (
@@ -132,7 +134,7 @@ export default function LoginPage() {
             disabled={resendSent}
             className="auth-resend"
           >
-            {resendSent ? '已重新发送验证邮件' : '未收到验证邮件？重新发送'}
+            {resendSent ? t('auth.resent') : t('auth.resend')}
           </button>
           {resendError && (
             <p role="alert" className="auth-error auth-error-center">

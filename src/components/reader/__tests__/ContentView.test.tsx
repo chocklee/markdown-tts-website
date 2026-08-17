@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
+import { act, screen } from '@testing-library/react'
+import { renderWithI18n } from '@/test-utils/i18n'
 import { ContentView } from '../ContentView'
 import { defaultSettings } from '@/types/reader'
 import { parseDocument } from '@/lib/markdown/parse'
@@ -32,7 +33,7 @@ function renderWithStore(currentIndex: number, settingsOverride?: Partial<Reader
     queue: null,
     engine: null,
   })
-  return render(<ContentView document={DOC} />)
+  return renderWithI18n(<ContentView document={DOC} />)
 }
 
 describe('ContentView', () => {
@@ -62,7 +63,7 @@ describe('ContentView', () => {
 
   it('跳过代码块时显示占位提示', () => {
     useReaderStore.setState({ settings: { ...defaultSettings } })
-    render(<ContentView document={DOC} />)
+    renderWithI18n(<ContentView document={DOC} />)
     expect(screen.getByText('已跳过代码块，可在朗读设置中开启')).toBeInTheDocument()
   })
 
@@ -92,7 +93,7 @@ describe('ContentView', () => {
       queue: null,
       engine: null,
     })
-    render(<ContentView document={doc} />)
+    renderWithI18n(<ContentView document={doc} />)
     expect(screen.getByText('嵌套项。')).toBeInTheDocument()
     expect(doc.sentenceIds).toHaveLength(2)
   })

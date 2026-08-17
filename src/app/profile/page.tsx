@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useReaderStore } from '@/lib/state/readerStore'
 import { useUiStore } from '@/lib/state/uiStore'
+import { useI18n } from '@/lib/i18n'
+import { pkgName } from '@/lib/i18n/packages'
 import { AppShell, GuestGate } from '@/components/app/AppShell'
 import { IconChevron } from '@/components/app/icons'
 import { clearPosition } from '@/lib/storage/local'
@@ -40,8 +42,11 @@ function formatBytes(n: number): string {
   return `${n} B`
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, lang: 'zh' | 'en'): string {
   const d = new Date(iso)
+  if (lang === 'en') {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
   const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()]
   return `${d.getMonth() + 1} 月 ${d.getDate()} 日 · ${week}`
 }
@@ -72,6 +77,7 @@ function localStorageUsage(): number {
 
 function ProfileContent() {
   const { status, data: session } = useSession()
+  const { t, lang } = useI18n()
   const router = useRouter()
   const searchParams = useSearchParams()
   const showToast = useUiStore((s) => s.showToast)
@@ -119,12 +125,12 @@ function ProfileContent() {
   }, [status, refreshBalance])
 
   useEffect(() => {
-    if (searchParams.get('success')) showToast('订阅成功，本月积分已到账！')
-    else if (searchParams.get('cancel')) showToast('已取消支付')
+    if (searchParams.get('success')) showToast(t('profile.toastSubscribed'))
+    else if (searchParams.get('cancel')) showToast(t('profile.toastCanceled'))
     if (searchParams.get('success') || searchParams.get('cancel')) {
       void refreshBalance()
     }
-  }, [searchParams, refreshBalance, showToast])
+  }, [searchParams, refreshBalance, showToast, t])
 
   const name = session?.user?.name ?? (session?.user?.email ? session.user.email.split('@')[0] : '')
   const initial = (name || '墨')[0]
@@ -152,7 +158,7 @@ function ProfileContent() {
     const pkg = packages.find((p) => p.id === chosenId)
     if (!pkg) return
     if (currentPlanId && pkg.id === currentPlanId) {
-      showToast('当前已订阅该套餐')
+      showToast(t('profile.alreadySubscribed'))
       return
     }
     setBusy(true)
@@ -167,19 +173,19 @@ function ProfileContent() {
         window.location.href = data.url
         return
       }
-      showToast(data.error ?? '创建支付会话失败')
+      showToast(data.error ?? t('profile.checkoutFailed'))
     } catch {
-      showToast('网络错误，请稍后再试')
+      showToast(t('profile.networkError'))
     } finally {
       setBusy(false)
     }
-  }, [chosenId, packages, currentPlanId, showToast])
+  }, [chosenId, packages, currentPlanId, showToast, t])
 
   const clearCache = useCallback(() => {
     clearPosition()
     setCacheBytes(0)
-    showToast('已清除缓存')
-  }, [showToast])
+    showToast(t('profile.cacheCleared'))
+  }, [showToast, t])
 
   const midPackage = useMemo(() => packages.find((p) => p.id === 'light') ?? packages[1] ?? packages[0] ?? null, [packages])
   const [usedBytes, setUsedBytes] = useState<number | null>(null)
@@ -195,7 +201,7 @@ function ProfileContent() {
       <GuestGate>
         <section className="view active">
           <header className="page-head">
-            <h1>我的</h1>
+            <h1>{t('profile.title')}</h1>
           </header>
 
           <div className="profile-grid">
@@ -205,25 +211,25 @@ function ProfileContent() {
                   {initial}
                 </span>
                 <div className="body">
-                  <div className="nm">{name || '墨听用户'}</div>
+                  <div className="nm">{name || t('profile.userFallback')}</div>
                   <div className="sub">
-                    <span className="num">墨听 ID · {shortId(email)}</span>
+                    <span className="num">{t('profile.idLabel', { id: shortId(email) })}</span>
                   </div>
                 </div>
               </div>
               <div className="card">
-                <p className="kicker">积分余额</p>
+                <p className="kicker">{t('profile.creditsTitle')}</p>
                 <p className="amount">
                   <span className="num">{balance.creditsBalance ?? '—'}</span>
-                  <span className="unit">积分</span>
+                  <span className="unit">{t('transactions.credits')}</span>
                 </p>
-                <p className="hint">可用于兑换云端音色与长文档朗读</p>
+                <p className="hint">{t('profile.creditsHint')}</p>
                 {balance.subscription?.status === 'active' ? (
                   <p className="meta" style={{ marginTop: 8 }}>
-                    订阅中 · 下次续费 {balance.subscription.periodEnd ? formatDate(balance.subscription.periodEnd) : ''}，剩余积分到期清零
+                    {t('profile.subActive', { date: balance.subscription.periodEnd ? formatDate(balance.subscription.periodEnd, lang) : '' })}
                   </p>
                 ) : (
-                  <p className="meta" style={{ marginTop: 8 }}>未订阅 · 注册即送 50 积分</p>
+                  <p className="meta" style={{ marginTop: 8 }}>{t('profile.subInactive')}</p>
                 )}
                 <button
                   type="button"
@@ -239,7 +245,7 @@ function ProfileContent() {
                     else router.push('/#pricing')
                   }}
                 >
-                  {balance.subscription?.status === 'active' ? '切换套餐' : '订阅套餐'}
+                  {balance.subscription?.status === 'active' ? t('profile.switchPlan') : t('profile.subscribe')}
                 </button>
               </div>
             </div>
@@ -248,38 +254,38 @@ function ProfileContent() {
               <div className="card">
                 <div className="sec-head">
                   <h2 className="h2" style={{ fontSize: 18 }}>
-                    订阅套餐
+                    {t('profile.subscribe')}
                   </h2>
-                  <p className="meta">包月 · 到期清零</p>
+                  <p className="meta">{t('profile.plansMeta')}</p>
                 </div>
                 {packages.map((pkg) => (
                   <button key={pkg.id} type="button" className="row-item" onClick={() => openBuy(pkg)}>
                     <div className="body">
                       <div className="title">
-                        {pkg.name}
-                        <span className="tag-inline">{pkg.credits} 积分/月</span>
-                        {pkg.id === 'light' && <span className="tag-inline">最受欢迎</span>}
-                        {pkg.id === 'unlimited' && <span className="tag-inline">超值</span>}
+                        {pkgName(t, pkg.id)}
+                        <span className="tag-inline">{t('landing.planCreditsPerMonth', { n: pkg.credits })}</span>
+                        {pkg.id === 'light' && <span className="tag-inline">{t('profile.mostPopular')}</span>}
+                        {pkg.id === 'unlimited' && <span className="tag-inline">{t('profile.bestValue')}</span>}
                       </div>
                       <div className="sub">
-                        {pkg.id === 'starter' && '适合先体验朗读与问答功能'}
-                        {pkg.id === 'light' && '日常朗读的常用选择'}
-                        {pkg.id === 'unlimited' && '单位积分最划算，适合深度用户'}
+                        {pkg.id === 'starter' && t('profile.starterDesc')}
+                        {pkg.id === 'light' && t('profile.lightDesc')}
+                        {pkg.id === 'unlimited' && t('profile.unlimitedDesc')}
                       </div>
                     </div>
-                    <span className="price">${pkg.usd.toFixed(2)}<span className="unit" style={{ fontSize: 12, color: 'var(--muted)' }}>/月</span></span>
+                    <span className="price">${pkg.usd.toFixed(2)}<span className="unit" style={{ fontSize: 12, color: 'var(--muted)' }}>{t('profile.perMonth')}</span></span>
                     <IconChevron className="chev" />
                   </button>
                 ))}
-                {packages.length === 0 && <p className="meta" style={{ padding: '8px 0' }}>加载中…</p>}
+                {packages.length === 0 && <p className="meta" style={{ padding: '8px 0' }}>{t('profile.loading')}</p>}
               </div>
 
               <div className="card">
                 <div className="sec-head">
                   <h2 className="h2" style={{ fontSize: 18 }}>
-                    消费记录
+                    {t('profile.recordsTitle')}
                   </h2>
-                  <p className="meta">积分收支明细</p>
+                  <p className="meta">{t('profile.recordsMeta')}</p>
                 </div>
                 <Link
                   href="/transactions"
@@ -287,8 +293,8 @@ function ProfileContent() {
                   style={{ textDecoration: 'none', color: 'var(--fg)' }}
                 >
                   <div className="body">
-                    <div className="title">查看全部消费记录</div>
-                    <div className="sub">充值、订阅发放与朗读扣费明细</div>
+                    <div className="title">{t('profile.recordsLink')}</div>
+                    <div className="sub">{t('profile.recordsLinkSub')}</div>
                   </div>
                   <IconChevron className="chev" />
                 </Link>
@@ -298,48 +304,48 @@ function ProfileContent() {
 
           <div className="card full">
             <div className="sec-head">
-              <h2 className="h2">设置</h2>
+              <h2 className="h2">{t('profile.settingsTitle')}</h2>
             </div>
             <p className="group-label" style={{ marginTop: 0 }}>
-              朗读
+              {t('reader.reading')}
             </p>
             <div className="row-item">
               <div className="body">
-                <div className="title">跳过代码块</div>
-                <div className="sub">朗读时跳过代码片段</div>
+                <div className="title">{t('profile.skipCode')}</div>
+                <div className="sub">{t('reader.skipCodeDesc')}</div>
               </div>
-              <input type="checkbox" className="switch" checked={skipCode} onChange={toggleSkipCode} aria-label="跳过代码块" />
+              <input type="checkbox" className="switch" checked={skipCode} onChange={toggleSkipCode} aria-label={t('profile.skipCode')} />
             </div>
             <div className="row-item">
               <div className="body">
-                <div className="title">跳过表格</div>
-                <div className="sub">朗读时跳过表格内容</div>
+                <div className="title">{t('profile.skipTable')}</div>
+                <div className="sub">{t('reader.skipTableDesc')}</div>
               </div>
-              <input type="checkbox" className="switch" checked={skipTable} onChange={toggleSkipTable} aria-label="跳过表格" />
+              <input type="checkbox" className="switch" checked={skipTable} onChange={toggleSkipTable} aria-label={t('profile.skipTable')} />
             </div>
-            <p className="group-label">存储</p>
+            <p className="group-label">{t('profile.storageTitle')}</p>
             {status === 'authenticated' && balance.quotaBytes !== null && (
               <div className="row-item">
                 <div className="body">
-                  <div className="title">云存储</div>
-                  <div className="sub">文档自动同步，订阅套餐后升级 1G</div>
+                  <div className="title">{t('profile.storageTitle')}</div>
+                  <div className="sub">{t('profile.storageSub')}</div>
                 </div>
-                <span className="val">已用 {formatBytes(usedBytes ?? 0)} / {formatBytes(balance.quotaBytes)}</span>
+                <span className="val">{t('profile.storageUsed', { used: formatBytes(usedBytes ?? 0), quota: formatBytes(balance.quotaBytes) })}</span>
               </div>
             )}
             <button type="button" className="row-item" onClick={clearCache}>
               <div className="body">
-                <div className="title">清除缓存</div>
-                <div className="sub">清除本地收听进度等缓存</div>
+                <div className="title">{t('profile.clearCache')}</div>
+                <div className="sub">{t('profile.clearCacheSub')}</div>
               </div>
-              <span className="val" aria-label="缓存大小">{formatBytes(cacheBytes)}</span>
+              <span className="val" aria-label={t('profile.clearCache')}>{formatBytes(cacheBytes)}</span>
               <IconChevron className="chev" />
             </button>
-            <p className="group-label">关于</p>
+            <p className="group-label">{t('profile.about')}</p>
             <div className="row-item">
               <div className="body">
-                <div className="title">版本</div>
-                <div className="sub">墨听 · Web</div>
+                <div className="title">{t('profile.version')}</div>
+                <div className="sub">{t('profile.versionVal')}</div>
               </div>
               <span className="val">0.1.0</span>
             </div>
@@ -348,22 +354,20 @@ function ProfileContent() {
           {status === 'authenticated' && (
             <div style={{ maxWidth: 'var(--content-max)', marginTop: 20 }}>
               <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => signOut({ callbackUrl: '/' })}>
-                退出登录
+                {t('profile.signOut')}
               </button>
             </div>
           )}
-          <p className="foot meta">墨听 · Web 0.1.0</p>
+          <p className="foot meta">{t('profile.foot')}</p>
         </section>
       </GuestGate>
 
       {selected && (
         <div className="modal-overlay show">
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
-            <h3 id="m-title">订阅套餐</h3>
+            <h3 id="m-title">{t('profile.modalTitle')}</h3>
             <p className="m-sub">
-              {currentPlanId
-                ? '切换后将取消当前订阅，并按新套餐重新计费 · 剩余积分到期清零'
-                : '选择要订阅的套餐 · 每月自动续费 · 剩余积分到期清零'}
+              {currentPlanId ? t('profile.modalSubSwitch') : t('profile.modalSub')}
             </p>
             <div className="m-plans">
               {switchablePackages.map((pkg) => {
@@ -376,22 +380,22 @@ function ProfileContent() {
                     aria-pressed={chosen}
                     onClick={() => setChosenId(pkg.id)}
                   >
-                    <span className="m-plan-name">{pkg.name}</span>
-                    <span className="m-plan-credits">{pkg.credits} 积分/月</span>
-                    <span className="m-plan-price num">${pkg.usd.toFixed(2)}/月</span>
+                    <span className="m-plan-name">{pkgName(t, pkg.id)}</span>
+                    <span className="m-plan-credits">{t('landing.planCreditsPerMonth', { n: pkg.credits })}</span>
+                    <span className="m-plan-price num">${pkg.usd.toFixed(2)}{t('profile.perMonth')}</span>
                   </button>
                 )
               })}
               {switchablePackages.length === 0 && (
-                <p className="meta" style={{ padding: '12px 0' }}>没有其他可选套餐</p>
+                <p className="meta" style={{ padding: '12px 0' }}>{t('profile.noOtherPlan')}</p>
               )}
             </div>
             <div className="m-actions">
               <button type="button" className="btn-secondary" onClick={() => setSelected(null)} disabled={busy}>
-                取消
+                {t('common.cancel')}
               </button>
               <button type="button" className="btn-primary" onClick={() => void confirmBuy()} disabled={busy}>
-                {busy ? '处理中…' : '确认订阅'}
+                {busy ? t('transactions.loading') : t('profile.confirm')}
               </button>
             </div>
           </div>

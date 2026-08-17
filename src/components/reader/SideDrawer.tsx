@@ -1,6 +1,7 @@
 'use client'
 import type { ReactNode } from 'react'
 import { IconClose } from '@/components/app/icons'
+import { useI18n } from '@/lib/i18n'
 
 export function SideDrawer({
   open,
@@ -13,6 +14,7 @@ export function SideDrawer({
   onClose: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   return (
     <>
       <div className={`backdrop ${open ? 'show' : ''}`} onClick={onClose} aria-hidden={!open} />
@@ -25,7 +27,7 @@ export function SideDrawer({
       >
         <div className="drawer-head">
           <h2>{title}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="关闭">
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t('reader.close')}>
             <IconClose />
           </button>
         </div>

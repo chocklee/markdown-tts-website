@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useUiStore } from '@/lib/state/uiStore'
+import { useI18n, LangSwitch } from '@/lib/i18n'
 import { IconLibrary, IconProfile, IconLock, IconCard } from './icons'
 
 export type AppNav = 'library' | 'reader' | 'profile'
@@ -23,14 +24,18 @@ export function useAccount(): AccountState {
   return useContext(AccountContext)
 }
 
-const NAV_ITEMS: { key: AppNav; href: string; label: string; Icon: typeof IconLibrary }[] = [
-  { key: 'library', href: '/library', label: '文库', Icon: IconLibrary },
-  { key: 'profile', href: '/profile', label: '我的', Icon: IconProfile },
-]
+function navItems(t: (k: string, v?: Record<string, string | number>) => string) {
+  return [
+    { key: 'library' as const, href: '/library', label: t('nav.library'), Icon: IconLibrary },
+    { key: 'profile' as const, href: '/profile', label: t('nav.profile'), Icon: IconProfile },
+  ]
+}
 
 export function AppShell({ nav, children }: { nav: AppNav; children: ReactNode }) {
   const { status, data: session } = useSession()
   const toast = useUiStore((s) => s.toast)
+  const { t } = useI18n()
+  const NAV_ITEMS = navItems(t)
   const [credits, setCredits] = useState({ creditsBalance: null as number | null, purchased: false })
 
   const refresh = async () => {
@@ -55,17 +60,17 @@ export function AppShell({ nav, children }: { nav: AppNav; children: ReactNode }
   const authenticated = status === 'authenticated'
   const name = session?.user?.name ?? (session?.user?.email ? session.user.email.split('@')[0] : '')
   const initial = (name || '墨')[0]
-  const navLabel = nav === 'reader' ? '文库' : NAV_ITEMS.find((i) => i.key === nav)?.label ?? '文库'
+  const navLabel = nav === 'reader' ? t('nav.library') : NAV_ITEMS.find((i) => i.key === nav)?.label ?? t('nav.library')
 
   return (
     <AccountContext.Provider value={{ creditsBalance: credits.creditsBalance, purchased: credits.purchased, refresh }}>
       <div className="app flex min-h-0 flex-1">
-        <aside className="sidebar" aria-label="侧边导航">
+        <aside className="sidebar" aria-label={t('shell.sidebarLabel')}>
           <div className="brand">
             <p className="word">墨听</p>
-            <span className="cap">文库 · 有声文件</span>
+            <span className="cap">{t('brand.cap')}</span>
           </div>
-          <nav className="nav" aria-label="主导航">
+          <nav className="nav" aria-label={t('nav.library')}>
             {NAV_ITEMS.map(({ key, href, label, Icon }) => (
               <Link key={key} href={href} className={`nav-item ${nav === key ? 'active' : ''}`}>
                 <Icon />
@@ -73,14 +78,14 @@ export function AppShell({ nav, children }: { nav: AppNav; children: ReactNode }
               </Link>
             ))}
           </nav>
-          <Link href="/profile" className="side-user" aria-label="我的账户">
+          <Link href="/profile" className="side-user" aria-label={t('nav.profile')}>
             {authenticated ? (
               <>
                 <span className="av" aria-hidden="true">{initial}</span>
                 <div>
-                  <div className="nm">{name || '墨听用户'}</div>
+                  <div className="nm">{name || t('profile.userFallback')}</div>
                   <div className="cr">
-                    <span className="num">{credits.creditsBalance ?? '—'}</span> 积分
+                    <span className="num">{credits.creditsBalance ?? '—'}</span> {t('transactions.credits')}
                   </div>
                 </div>
               </>
@@ -88,12 +93,13 @@ export function AppShell({ nav, children }: { nav: AppNav; children: ReactNode }
               <>
                 <span className="av guest" aria-hidden="true"><IconProfile /></span>
                 <div>
-                  <div className="nm">未登录</div>
-                  <div className="cr">登录后同步文库与积分</div>
+                  <div className="nm">{t('shell.guestName')}</div>
+                  <div className="cr">{t('shell.guestHint')}</div>
                 </div>
               </>
             )}
           </Link>
+          <LangSwitch />
         </aside>
 
         <div className="main">
@@ -102,7 +108,7 @@ export function AppShell({ nav, children }: { nav: AppNav; children: ReactNode }
               <p className="word">墨听</p>
               <span className="cap">{navLabel}</span>
             </div>
-            <nav className="nav" aria-label="主导航">
+            <nav className="nav" aria-label={t('nav.library')}>
               {NAV_ITEMS.map(({ key, href, label, Icon }) => (
                 <Link key={key} href={href} className={`nav-item ${nav === key ? 'active' : ''}`}>
                   <Icon />
@@ -115,19 +121,20 @@ export function AppShell({ nav, children }: { nav: AppNav; children: ReactNode }
                 <span className="num">
                   <b>{credits.creditsBalance ?? '—'}</b>
                 </span>{' '}
-                积分
+                {t('transactions.credits')}
               </span>
             ) : (
               <Link href="/login" className="credit-pill" style={{ textDecoration: 'none' }}>
-                登录 / 注册
+                {t('shell.login')}
               </Link>
             )}
+            <LangSwitch />
           </div>
           {children}
         </div>
       </div>
 
-      <nav className="tabnav" aria-label="底部导航">
+      <nav className="tabnav" aria-label={t('shell.tabnavLabel')}>
         {NAV_ITEMS.map(({ key, href, label, Icon }) => (
           <Link key={key} href={href} className={`tab ${nav === key ? 'active' : ''}`}>
             <Icon />
@@ -145,6 +152,7 @@ export function AppShell({ nav, children }: { nav: AppNav; children: ReactNode }
 
 export function GuestGate({ children }: { children: ReactNode }) {
   const { status } = useSession()
+  const { t } = useI18n()
 
   if (status === 'loading') return null
   if (status === 'unauthenticated') {
@@ -154,26 +162,26 @@ export function GuestGate({ children }: { children: ReactNode }) {
           <div className="card guest-card">
             <div className="brand guest-brand">
               <p className="word">墨听</p>
-              <span className="cap">文库 · 有声文件</span>
+              <span className="cap">{t('brand.cap')}</span>
             </div>
-            <h1 className="guest-title">登录后继续</h1>
-            <p className="guest-desc">登录后可同步文库、积分与消费记录，购买的高级音色与长文档朗读支持跨设备使用。</p>
+            <h1 className="guest-title">{t('shell.guestTitle')}</h1>
+            <p className="guest-desc">{t('shell.guestDesc')}</p>
             <div className="guest-benefits">
               <div className="gb">
                 <IconLibrary />
-                文库与收听进度云同步
+                {t('shell.benefit1')}
               </div>
               <div className="gb">
                 <IconCard />
-                积分余额与消费记录
+                {t('shell.benefit2')}
               </div>
               <div className="gb">
                 <IconLock />
-                高级音色 · 长文档朗读
+                {t('shell.benefit3')}
               </div>
             </div>
             <Link href="/login" className="btn-primary" style={{ width: '100%', textDecoration: 'none' }}>
-              登录 / 注册
+              {t('shell.login')}
             </Link>
           </div>
         </div>

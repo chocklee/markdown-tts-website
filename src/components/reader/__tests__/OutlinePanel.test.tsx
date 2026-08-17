@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithI18n } from '@/test-utils/i18n'
 import userEvent from '@testing-library/user-event'
 import { OutlinePanel } from '../OutlinePanel'
 import { parseDocument } from '@/lib/markdown/parse'
@@ -20,7 +21,7 @@ describe('OutlinePanel', () => {
       queue: null,
       engine: null,
     })
-    render(<OutlinePanel document={DOC} />)
+    renderWithI18n(<OutlinePanel document={DOC} />)
     expect(screen.getByText('第一章')).toBeInTheDocument()
     expect(screen.getByText('第二章')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /第二章/ }).className).toContain('active')
@@ -38,7 +39,7 @@ describe('OutlinePanel', () => {
       engine: null,
     })
     const user = userEvent.setup()
-    render(<OutlinePanel document={DOC} />)
+    renderWithI18n(<OutlinePanel document={DOC} />)
     await user.click(screen.getByText('第二章'))
     expect(seekTo).toHaveBeenCalledWith('s3')
   })

@@ -8,11 +8,13 @@ import { loadPosition, savePosition } from '@/lib/storage/local'
 import { useReaderStore } from '@/lib/state/readerStore'
 import { ReaderLayout } from '@/components/reader/ReaderLayout'
 import { AppShell } from '@/components/app/AppShell'
+import { useI18n } from '@/lib/i18n'
 import type { ReaderDocument } from '@/types/reader'
 import type { LibraryDocument } from '@/types/document'
 
 export function ReaderClient({ docId }: { docId: string | null }) {
   const router = useRouter()
+  const { t } = useI18n()
   const [stored, setStored] = useState<LibraryDocument | null>(null)
   const [doc, setDoc] = useState<ReaderDocument | null>(null)
   const init = useReaderStore((s) => s.init)
@@ -88,10 +90,10 @@ export function ReaderClient({ docId }: { docId: string | null }) {
       {!doc ? (
         <div className="view active">
           <div className="reader-toolbar">
-            <span className="doc-title">加载中…</span>
+            <span className="doc-title">{t('reader.loadingDoc')}</span>
           </div>
           <p className="meta" style={{ textAlign: 'center', padding: '48px 0' }}>
-            正在载入文档…
+            {t('reader.loadingDocSub')}
           </p>
         </div>
       ) : (

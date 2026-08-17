@@ -13,6 +13,7 @@ import {
 import { runSync } from '@/lib/sync/manager'
 import { scheduleSync } from '@/lib/sync/schedule'
 import { useUiStore } from '@/lib/state/uiStore'
+import { useI18n } from '@/lib/i18n'
 import { AppShell, GuestGate } from '@/components/app/AppShell'
 import { IconSearch, IconPlus, IconPlay, IconMore } from '@/components/app/icons'
 import type { LibraryDocument } from '@/types/document'
@@ -25,8 +26,11 @@ function formatBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
 
-function formatDate(ts: number): string {
+function formatDate(ts: number, lang: 'zh' | 'en'): string {
   const d = new Date(ts)
+  if (lang === 'en') {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
   const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()]
   return `${d.getMonth() + 1} 月 ${d.getDate()} 日 · ${week}`
 }
@@ -37,6 +41,7 @@ function daysLeft(expiresAt: number): number {
 
 export function LibraryView() {
   const { status } = useSession()
+  const { t, lang } = useI18n()
   const [docs, setDocs] = useState<LibraryDocument[]>([])
   const [tab, setTab] = useState<Tab>('docs')
   const [query, setQuery] = useState('')
@@ -60,9 +65,9 @@ export function LibraryView() {
     try {
       const result = await runSync()
       if (result.error) {
-        showToast(result.error)
+        showToast(t(result.error))
       } else if (result.uploaded + result.downloaded > 0) {
-        showToast(`已同步：上传 ${result.uploaded} 篇，下载 ${result.downloaded} 篇`)
+        showToast(t('library.syncedToast', { up: result.uploaded, down: result.downloaded }))
       }
       if (result.quotaBytes !== null) {
         const all = await listDocuments().catch(() => null)
@@ -73,7 +78,7 @@ export function LibraryView() {
       setSyncing(false)
       await refresh().catch(() => {})
     }
-  }, [status, refresh, showToast])
+  }, [status, refresh, showToast, t])
 
   useEffect(() => {
     void refresh()
@@ -147,11 +152,11 @@ export function LibraryView() {
       <GuestGate>
         <section className="view active">
           <header className="page-head">
-            <h1>文库</h1>
+            <h1>{t('library.title')}</h1>
             <p className="meta">
-              <span className="num">{docsCount}</span> 个文件
+              <span className="num">{docsCount}</span> {t('library.files', { n: docsCount })}
               {status === 'authenticated' && quota
-                ? ` · 已用 ${formatBytes(usedBytes)} / ${formatBytes(quota.quotaBytes)}`
+                ? ` · ${t('library.usedOf', { used: formatBytes(usedBytes), quota: formatBytes(quota.quotaBytes) })}`
                 : ''}
             </p>
           </header>
@@ -163,12 +168,12 @@ export function LibraryView() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="搜索标题或内容…"
-                aria-label="搜索文件"
+                placeholder={t('library.searchPlaceholder')}
+                aria-label={t('library.searchLabel')}
                 autoComplete="off"
               />
             </div>
-            <div className="chips" role="group" aria-label="按状态筛选">
+            <div className="chips" role="group" aria-label={t('library.all')}>
               <button
                 type="button"
                 className={`chip ${tab === 'docs' ? 'active' : ''}`}
@@ -178,7 +183,7 @@ export function LibraryView() {
                   setMenuFor(null)
                 }}
               >
-                全部 · {docsCount}
+                {t('library.all')} · {docsCount}
               </button>
               <button
                 type="button"
@@ -189,36 +194,36 @@ export function LibraryView() {
                   setMenuFor(null)
                 }}
               >
-                回收站 · {trashCount}
+                {t('library.trash')} · {trashCount}
               </button>
             </div>
             <button type="button" className="rt-btn" onClick={() => void sync()} disabled={syncing} style={{ opacity: syncing ? 0.6 : 1 }}>
-              {syncing ? '同步中…' : '立即同步'}
+              {syncing ? t('library.syncing') : t('library.sync')}
             </button>
-            <Link href="/new" className="btn-primary btn-add-doc" aria-label="添加文档">
+            <Link href="/new" className="btn-primary btn-add-doc" aria-label={t('library.addDoc')}>
               <IconPlus />
-              添加文档
+              {t('library.addDoc')}
             </Link>
           </div>
 
           <p className="sr-only" aria-live="polite">
-            {visible.length > 0 ? `找到 ${visible.length} 个文件` : ''}
+            {visible.length > 0 ? t('library.found', { n: visible.length }) : ''}
           </p>
 
           <div className="feed">
             {visible.length === 0 && tab === 'docs' && !q && (
               <div className="card empty-card">
-                <p className="h3">还没有文档</p>
-                <p className="meta">粘贴或上传第一篇 Markdown，开始边看边听。</p>
+                <p className="h3">{t('library.emptyDocs')}</p>
+                <p className="meta">{t('library.emptyDocsSub')}</p>
                 <Link href="/new" className="btn-primary" style={{ marginTop: 14, textDecoration: 'none' }}>
-                  去创建第一篇文档
+                  {t('library.emptyDocsCta')}
                 </Link>
               </div>
             )}
             {visible.length === 0 && tab === 'docs' && q && (
               <div className="card empty-card">
-                <p className="h3">没有找到匹配的文稿</p>
-                <p className="meta">试试更短的关键词，或清空搜索与筛选后浏览全部文件。</p>
+                <p className="h3">{t('library.noMatch')}</p>
+                <p className="meta">{t('library.noMatchSub')}</p>
                 <button
                   type="button"
                   className="btn-secondary"
@@ -228,14 +233,14 @@ export function LibraryView() {
                     setTab('docs')
                   }}
                 >
-                  清空搜索与筛选
+                  {t('library.clearFilters')}
                 </button>
               </div>
             )}
             {visible.length === 0 && tab === 'trash' && (
               <div className="card empty-card">
-                <p className="h3">回收站是空的</p>
-                <p className="meta">删除的文档会在这里保留 30 天，过期后自动清除。</p>
+                <p className="h3">{t('library.trashEmpty')}</p>
+                <p className="meta">{t('library.trashEmptySub')}</p>
               </div>
             )}
 
@@ -254,16 +259,16 @@ export function LibraryView() {
                       <input
                         value={renameValue}
                         onChange={(e) => setRenameValue(e.target.value)}
-                        aria-label="新标题"
+                        aria-label={t('library.renameLabel')}
                         className="w-full rounded-lg border px-2 py-1.5 text-sm outline-none"
                         style={{ borderColor: 'var(--border)' }}
                         autoFocus
                       />
                       <button type="button" onClick={() => void confirmRename()} className="btn-primary" style={{ minHeight: 36, padding: '0 14px', fontSize: 13 }}>
-                        保存
+                        {t('common.save')}
                       </button>
                       <button type="button" onClick={() => setRenaming(null)} className="btn-secondary" style={{ minHeight: 36, padding: '0 14px', fontSize: 13 }}>
-                        取消
+                        {t('common.cancel')}
                       </button>
                     </div>
                   ) : (
@@ -276,9 +281,9 @@ export function LibraryView() {
                         {doc.title}
                       </Link>
                       <div className="sub">
-                        {formatDate(doc.updatedAt)} · {formatBytes(doc.fileSizeBytes)}
-                        {doc.deletedAt ? ` · 剩余 ${daysLeft(doc.deleteExpiresAt ?? doc.updatedAt)} 天` : ''}
-                        {doc.dirty && !doc.deletedAt ? ' · 待同步' : ''}
+                        {formatDate(doc.updatedAt, lang)} · {formatBytes(doc.fileSizeBytes)}
+                        {doc.deletedAt ? ` · ${t('library.daysLeft', { n: daysLeft(doc.deleteExpiresAt ?? doc.updatedAt) })}` : ''}
+                        {doc.dirty && !doc.deletedAt ? ` · ${t('library.pendingSync')}` : ''}
                       </div>
                     </>
                   )}
@@ -288,7 +293,7 @@ export function LibraryView() {
                     <Link
                       href={`/reader?docId=${encodeURIComponent(doc.docId)}`}
                       className="play"
-                      aria-label={`播放 ${doc.title}`}
+                      aria-label={t('library.playLabel', { title: doc.title })}
                       style={{ textDecoration: 'none' }}
                     >
                       <IconPlay />
@@ -298,7 +303,7 @@ export function LibraryView() {
                     <button
                       type="button"
                       className="icon-btn"
-                      aria-label={tab === 'docs' ? `更多操作 ${doc.title}` : `回收站操作 ${doc.title}`}
+                      aria-label={tab === 'docs' ? t('library.moreLabel', { title: doc.title }) : t('library.trashOpLabel', { title: doc.title })}
                       onClick={() => setMenuFor(menuFor === doc.docId ? null : doc.docId)}
                     >
                       <IconMore />
@@ -309,19 +314,19 @@ export function LibraryView() {
                       {tab === 'docs' ? (
                         <>
                           <button type="button" role="menuitem" onClick={() => void startRename(doc.docId)}>
-                            重命名
+                            {t('library.rename')}
                           </button>
                           <button type="button" role="menuitem" onClick={() => void remove(doc.docId)}>
-                            删除
+                            {t('library.delete')}
                           </button>
                         </>
                       ) : (
                         <>
                           <button type="button" role="menuitem" onClick={() => void doRestore(doc.docId)}>
-                            恢复
+                            {t('library.restore')}
                           </button>
                           <button type="button" role="menuitem" onClick={() => void doPurge(doc.docId)}>
-                            彻底删除
+                            {t('library.purge')}
                           </button>
                         </>
                       )}

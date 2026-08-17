@@ -1,10 +1,11 @@
 'use client'
 import { useState } from 'react'
 import { IconChat, IconSend } from '@/components/app/icons'
-
-const SUGGESTIONS = ['这篇文章讲了什么？', '总结一下核心观点', '有哪些行动建议？']
+import { useI18n } from '@/lib/i18n'
 
 export function QaPanel() {
+  const { t } = useI18n()
+  const SUGGESTIONS = [t('reader.qaS1'), t('reader.qaS2'), t('reader.qaS3')]
   const [question, setQuestion] = useState('')
   const [asked, setAsked] = useState<string | null>(null)
 
@@ -16,7 +17,7 @@ export function QaPanel() {
 
   return (
     <div>
-      <p className="meta qa-desc">基于当前文档内容回答 · 回答由文档生成</p>
+      <p className="meta qa-desc">{t('reader.qaDesc')}</p>
       <div className="qa-input-row">
         <div className="qa-field">
           <IconChat />
@@ -27,16 +28,16 @@ export function QaPanel() {
             onKeyDown={(e) => {
               if (e.key === 'Enter') ask(question)
             }}
-            placeholder="输入你的问题…"
-            aria-label="向文档提问"
+            placeholder={t('reader.qaPlaceholder')}
+            aria-label={t('reader.qaAskLabel')}
             autoComplete="off"
           />
         </div>
-        <button type="button" className="qa-send" aria-label="提问" onClick={() => ask(question)}>
+        <button type="button" className="qa-send" aria-label={t('reader.qaSend')} onClick={() => ask(question)}>
           <IconSend />
         </button>
       </div>
-      <p className="setting-label">试试这样问</p>
+      <p className="setting-label">{t('reader.qaTry')}</p>
       <div className="qa-chips">
         {SUGGESTIONS.map((s) => (
           <button key={s} type="button" className="qa-chip" onClick={() => ask(s)}>
@@ -47,7 +48,7 @@ export function QaPanel() {
       {asked && (
         <div className="qa-answer">
           <p className="q">{asked}</p>
-          <p className="a">文档问答正在开发中，即将上线。可以先试试上方的问题，或继续朗读本文档。</p>
+          <p className="a">{t('reader.qaComing')}</p>
         </div>
       )}
     </div>
