@@ -59,12 +59,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
   const cloudLocked = creditsBalance !== null && creditsBalance <= 0
   const voiceRows: { id: string; name: string; desc: string }[] = [
-    { id: 'browser', name: t('reader.browserVoice'), desc: t('reader.browserVoiceDesc') },
     ...voices.map((v) => ({
       id: v.id,
       name: v.name,
       desc: v.description ?? t('reader.cloudVoiceDesc'),
     })),
+    { id: 'browser', name: t('reader.browserVoice'), desc: t('reader.browserVoiceDesc') },
   ]
 
   const rateFill = `${((settings.rate - 0.5) / 1.5) * 100}%`

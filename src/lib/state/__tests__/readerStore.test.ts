@@ -68,9 +68,9 @@ describe('readerStore', () => {
 
   it('setConvertedSettings 同步设置并重建引擎', () => {
     const { store } = freshStore()
-    store.setConvertedSettings({ voice: 'alloy', rate: 1.25, skipCode: false, skipTable: true })
+    store.setConvertedSettings({ voice: 'nova', rate: 1.25, skipCode: false, skipTable: true })
     const state = useReaderStore.getState()
-    expect(state.settings.voice).toBe('alloy')
+    expect(state.settings.voice).toBe('nova')
     expect(state.settings.rate).toBe(1.25)
     expect(state.settings.skipCode).toBe(false)
     expect(state.settings.skipTable).toBe(true)
@@ -80,7 +80,7 @@ describe('readerStore', () => {
 
   it('setConvertedSettings 音色不变时不重建引擎', () => {
     const { store, engine } = freshStore()
-    store.setConvertedSettings({ voice: 'browser', rate: 1.5 })
+    store.setConvertedSettings({ voice: 'alloy', rate: 1.5 })
     const state = useReaderStore.getState()
     expect(state.engine).toBe(engine)
     expect(state.settings.rate).toBe(1.5)
@@ -217,7 +217,7 @@ describe('readerStore', () => {
   it('setVoice 更新 settings.voice 并重建为 CloudTtsEngine，保持当前句', () => {
     const { engine } = freshStore()
     const oldQueue = useReaderStore.getState().queue
-    expect(useReaderStore.getState().settings.voice).toBe('browser')
+    expect(useReaderStore.getState().settings.voice).toBe('alloy')
     useReaderStore.getState().seekTo('s3')
     useReaderStore.getState().setVoice('nova')
     const state = useReaderStore.getState()
@@ -246,7 +246,7 @@ describe('readerStore', () => {
 
   it('setVoice 相同音色不重建引擎', () => {
     const { engine } = freshStore()
-    useReaderStore.getState().setVoice('browser')
+    useReaderStore.getState().setVoice('alloy')
     expect(useReaderStore.getState().engine).toBe(engine)
   })
 })

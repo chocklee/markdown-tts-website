@@ -23,6 +23,14 @@ export function ReaderClient({ docId }: { docId: string | null }) {
   const [doc, setDoc] = useState<ReaderDocument | null>(null)
   const init = useReaderStore((s) => s.init)
   const document = useReaderStore((s) => s.document)
+  const setVoice = useReaderStore((s) => s.setVoice)
+  const voice = useReaderStore((s) => s.settings.voice)
+
+  // 未登录访客无法使用云端音色，默认回退为浏览器语音合成
+  useEffect(() => {
+    if (status === 'loading' || status === 'authenticated') return
+    if (voice !== 'browser') setVoice('browser')
+  }, [status, voice, setVoice])
 
   useEffect(() => {
     // 等 next-auth 状态就绪再查本地文档，避免 loading 期间用空账号查不到

@@ -47,7 +47,7 @@ export interface ReaderSettings {
 }
 
 export const defaultSettings: ReaderSettings = {
-  voice: 'browser',
+  voice: 'alloy',
   rate: 1,
   volume: 1,
   skipCode: true,
