@@ -99,7 +99,6 @@ export function AppShell({ nav, children }: { nav: AppNav; children: ReactNode }
               </>
             )}
           </Link>
-          <LangSwitch />
         </aside>
 
         <div className="main">
