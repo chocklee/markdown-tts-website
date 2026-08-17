@@ -207,11 +207,18 @@ export async function refundCredits(
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    await client.query(
+    const { rows } = await client.query<{ id: string }>(
       `INSERT INTO credit_transactions (user_id, amount, kind, ref, description, meta)
-       VALUES ($1, $2, 'adjustment', $3, $4, $5)`,
+       VALUES ($1, $2, 'adjustment', $3, $4, $5)
+       ON CONFLICT (user_id, ref) WHERE kind = 'adjustment' DO NOTHING
+       RETURNING id`,
       [userId, amount, ref, description, JSON.stringify(meta)],
     )
+    if (rows.length === 0) {
+      // 同一 ref 已退款过：幂等跳过，不重复加余额
+      await client.query('ROLLBACK')
+      return
+    }
     await client.query('UPDATE users SET credits_balance = credits_balance + $1 WHERE id = $2', [
       amount,
       userId,

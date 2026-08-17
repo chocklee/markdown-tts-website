@@ -56,6 +56,7 @@ function doneMeta(overrides: Partial<ConvertedAudio> = {}): ConvertedAudio {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(appendConvertedAudio).mockResolvedValue(true)
   vi.mocked(getProvider).mockReturnValue({
     id: 'doubao',
     costPerMillionChars: 38.9,
@@ -117,11 +118,27 @@ describe('advanceConversion', () => {
     vi.mocked(getServerDocument).mockResolvedValue(mockDocMulti)
     const status = await advanceConversion('u1', 'doc-1', 4)
     expect(appendConvertedAudio).toHaveBeenCalledTimes(1)
-    const [u, d, audio, done] = vi.mocked(appendConvertedAudio).mock.calls[0]
+    const [u, d, audio, done, total, expected] = vi.mocked(appendConvertedAudio).mock.calls[0]
     expect(done).toBe(4)
+    expect(total).toBe(8)
+    expect(expected).toBe(0)
     expect((audio as Buffer).toString()).toContain('audio:')
     expect(finishConverted).not.toHaveBeenCalled()
     expect(status.status).toBe('converting')
+  })
+
+  it('并发轮询未抢到批时不 finish/fail/refund 并返回最新状态', async () => {
+    vi.mocked(getConvertedMeta)
+      .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 0, chunksTotal: 8, audio: null, sizeBytes: 0 }))
+      .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 4, chunksTotal: 8, progress: 0.5, audio: null, sizeBytes: 40 }))
+    vi.mocked(getServerDocument).mockResolvedValue(mockDocMulti)
+    vi.mocked(appendConvertedAudio).mockResolvedValue(false)
+    const status = await advanceConversion('u1', 'doc-1', 4)
+    expect(appendConvertedAudio).toHaveBeenCalledTimes(1)
+    expect(finishConverted).not.toHaveBeenCalled()
+    expect(failConverted).not.toHaveBeenCalled()
+    expect(refundCredits).not.toHaveBeenCalled()
+    expect(status).toEqual(expect.objectContaining({ status: 'converting', sizeBytes: 40, progress: 0.5 }))
   })
 
   it('全部完成时 finish 并检查配额', async () => {
@@ -152,6 +169,35 @@ describe('advanceConversion', () => {
     expect(status.status).toBe('failed')
   })
 
+  it('配额检查包含刚完成音频（含 updated.sizeBytes 达标时 finish）', async () => {
+    vi.mocked(getConvertedMeta)
+      .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 4, chunksTotal: 8, audio: null, sizeBytes: 50 }))
+      .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 8, chunksTotal: 8, audio: null, sizeBytes: 50 }))
+    vi.mocked(getServerDocument).mockResolvedValue(mockDocMulti)
+    vi.mocked(getUserQuotaBytes).mockResolvedValue(250)
+    vi.mocked(sumServerDocumentBytes).mockResolvedValue(100)
+    vi.mocked(sumConvertedBytes).mockResolvedValue(100)
+    const status = await advanceConversion('u1', 'doc-1', 4)
+    expect(finishConverted).toHaveBeenCalledWith('u1', 'doc-1')
+    expect(failConverted).not.toHaveBeenCalled()
+    expect(status.status).toBe('done')
+  })
+
+  it('配额检查包含刚完成音频（不含 updated.sizeBytes 会误判时失败并退款）', async () => {
+    vi.mocked(getConvertedMeta)
+      .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 4, chunksTotal: 8, audio: null, sizeBytes: 50 }))
+      .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 8, chunksTotal: 8, audio: null, sizeBytes: 50 }))
+    vi.mocked(getServerDocument).mockResolvedValue(mockDocMulti)
+    vi.mocked(getUserQuotaBytes).mockResolvedValue(249)
+    vi.mocked(sumServerDocumentBytes).mockResolvedValue(100)
+    vi.mocked(sumConvertedBytes).mockResolvedValue(100)
+    const status = await advanceConversion('u1', 'doc-1', 4)
+    expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'QUOTA_EXCEEDED')
+    expect(refundCredits).toHaveBeenCalled()
+    expect(finishConverted).not.toHaveBeenCalled()
+    expect(status.status).toBe('failed')
+  })
+
   it('合成失败时失败并退款', async () => {
     vi.mocked(getConvertedMeta)
       .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 0, chunksTotal: 8, audio: null, sizeBytes: 0 }))
@@ -165,6 +211,17 @@ describe('advanceConversion', () => {
     expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'boom')
     expect(refundCredits).toHaveBeenCalled()
     expect(status.status).toBe('failed')
+  })
+
+  it('无转换记录抛 CONVERT_NOT_FOUND', async () => {
+    vi.mocked(getConvertedMeta).mockResolvedValue(null)
+    await expect(advanceConversion('u1', 'doc-1')).rejects.toThrow('CONVERT_NOT_FOUND')
+  })
+
+  it('文档不存在抛 DOC_NOT_FOUND', async () => {
+    vi.mocked(getConvertedMeta).mockResolvedValue(doneMeta({ status: 'converting', chunksDone: 0, chunksTotal: 8, audio: null, sizeBytes: 0 }))
+    vi.mocked(getServerDocument).mockResolvedValue(null)
+    await expect(advanceConversion('u1', 'doc-1')).rejects.toThrow('DOC_NOT_FOUND')
   })
 })
 

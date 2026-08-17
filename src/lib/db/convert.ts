@@ -138,8 +138,9 @@ export async function appendConvertedAudio(
   audio: Buffer,
   chunksDone: number,
   chunksTotal: number,
-): Promise<void> {
-  await pool.query(
+  expectedChunksDone: number,
+): Promise<boolean> {
+  const { rowCount } = await pool.query(
     `UPDATE converted_audios
      SET audio = COALESCE(audio, ''::bytea) || $3,
          size_bytes = size_bytes + $4,
@@ -147,9 +148,10 @@ export async function appendConvertedAudio(
          progress = $6,
          status = 'converting',
          updated_at = now()
-     WHERE user_id = $1 AND doc_id = $2`,
-    [userId, docId, audio, audio.length, chunksDone, chunksTotal > 0 ? chunksDone / chunksTotal : 0],
+     WHERE user_id = $1 AND doc_id = $2 AND chunks_done = $7 AND status IN ('pending', 'converting')`,
+    [userId, docId, audio, audio.length, chunksDone, chunksTotal > 0 ? chunksDone / chunksTotal : 0, expectedChunksDone],
   )
+  return (rowCount ?? 0) > 0
 }
 
 export async function finishConverted(userId: string, docId: string): Promise<void> {

@@ -133,13 +133,21 @@ export async function advanceConversion(userId: string, docId: string, batchSize
     )
     const joined = Buffer.concat(results.map((r) => r.audio))
     const done = row.chunksDone + results.length
-    await appendConvertedAudio(userId, docId, joined, done, chunks.length)
+    const claimed = await appendConvertedAudio(userId, docId, joined, done, chunks.length, row.chunksDone)
+    if (!claimed) {
+      // 另一并发轮询已推进本批：不 finish、不退款，返回最新状态
+      const current = await getConvertedMeta(userId, docId)
+      if (!current) throw new Error('CONVERT_NOT_FOUND')
+      return toStatus(current)
+    }
 
     if (done >= chunks.length) {
       const updated = await getConvertedMeta(userId, docId)
       if (!updated) throw new Error('CONVERT_NOT_FOUND')
       const quotaBytes = await getUserQuotaBytes(userId)
-      const usedBytes = (await sumServerDocumentBytes(userId)) + (await sumConvertedBytes(userId))
+      // sumConvertedBytes 只统计 status='done' 行，刚 append 的行还是 'converting'，
+      // 需加上 updated.sizeBytes（含本批音频）才算入刚完成的整条音频
+      const usedBytes = (await sumServerDocumentBytes(userId)) + (await sumConvertedBytes(userId)) + updated.sizeBytes
       if (usedBytes > quotaBytes) {
         await failConverted(userId, docId, 'QUOTA_EXCEEDED')
         await refundCredits(userId, creditsFor(row), ref, { docId, reason: 'quota' }, CONVERT_REFUND_DESC)
