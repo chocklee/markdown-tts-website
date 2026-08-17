@@ -11,7 +11,6 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <PlaybackBar />
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-64 shrink-0 overflow-y-auto border-r border-slate-200 bg-white p-4">
           <OutlinePanel document={document} />
@@ -36,6 +35,7 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
           )}
         </main>
       </div>
+      <PlaybackBar />
     </div>
   )
 }
