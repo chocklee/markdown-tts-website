@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useReaderStore } from '@/lib/state/readerStore'
 import { useUiStore } from '@/lib/state/uiStore'
 import { AppShell, GuestGate } from '@/components/app/AppShell'
@@ -17,14 +18,6 @@ interface PackageInfo {
   usd: number
   credits: number
   billing?: string
-}
-
-interface Transaction {
-  id: string
-  amount: number
-  kind: string
-  description: string
-  createdAt: string
 }
 
 interface SubscriptionInfo {
@@ -84,7 +77,6 @@ function ProfileContent() {
   const showToast = useUiStore((s) => s.showToast)
   const [balance, setBalance] = useState<BalanceInfo>({ creditsBalance: null, quotaBytes: null, purchased: false, subscription: null })
   const [packages, setPackages] = useState<PackageInfo[]>([])
-  const [items, setItems] = useState<Transaction[]>([])
   const [cacheBytes, setCacheBytes] = useState(0)
   const [selected, setSelected] = useState<PackageInfo | null>(null)
   const [chosenId, setChosenId] = useState<string>('light')
@@ -122,10 +114,6 @@ function ProfileContent() {
     void fetch('/api/credits/packages')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setPackages(Array.isArray(data?.packages) ? data.packages : []))
-      .catch(() => {})
-    void fetch('/api/credits/transactions?limit=10')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setItems(Array.isArray(data?.items) ? data.items : []))
       .catch(() => {})
     setCacheBytes(localStorageUsage())
   }, [status, refreshBalance])
@@ -291,22 +279,19 @@ function ProfileContent() {
                   <h2 className="h2" style={{ fontSize: 18 }}>
                     消费记录
                   </h2>
-                  <p className="meta">最近 30 天</p>
+                  <p className="meta">积分收支明细</p>
                 </div>
-                {items.length === 0 && <p className="meta" style={{ padding: '8px 0' }}>暂无消费记录</p>}
-                {items.map((tx) => (
-                  <div key={tx.id} className="row-item">
-                    <div className="body">
-                      <div className="title">{tx.description}</div>
-                      <div className="sub num">{formatDate(tx.createdAt)}</div>
-                    </div>
-                    <span className="amt" style={{ color: tx.amount >= 0 ? 'var(--accent-strong)' : 'var(--fg)' }}>
-                      {tx.amount >= 0 ? '+' : ''}
-                      {tx.amount}
-                    </span>
-                    <span style={{ flex: '0 0 auto', fontSize: 12, color: 'var(--muted)' }}>积分</span>
+                <Link
+                  href="/transactions"
+                  className="row-item"
+                  style={{ textDecoration: 'none', color: 'var(--fg)' }}
+                >
+                  <div className="body">
+                    <div className="title">查看全部消费记录</div>
+                    <div className="sub">充值、订阅发放与朗读扣费明细</div>
                   </div>
-                ))}
+                  <IconChevron className="chev" />
+                </Link>
               </div>
             </div>
           </div>
