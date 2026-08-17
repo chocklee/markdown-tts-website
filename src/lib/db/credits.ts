@@ -202,20 +202,19 @@ export async function refundCredits(
   amount: number,
   ref: string,
   meta: unknown,
-  description = '合成失败退还积分',
 ): Promise<void> {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO credit_transactions (user_id, amount, kind, ref, description, meta)
-       VALUES ($1, $2, 'adjustment', $3, $4, $5)
-       ON CONFLICT (user_id, ref) WHERE kind = 'adjustment' DO NOTHING
+    // 每笔扣费恰好退一次：删除对应的 consumption 扣费行（amount 存负数）
+    // 并发退款只有一个能删到行；无扣费行时直接返回，防止重复退款/无扣费退款
+    const { rowCount } = await client.query<{ id: string }>(
+      `DELETE FROM credit_transactions
+       WHERE user_id = $1 AND ref = $2 AND kind = 'consumption' AND amount = $3
        RETURNING id`,
-      [userId, amount, ref, description, JSON.stringify(meta)],
+      [userId, ref, -amount],
     )
-    if (rows.length === 0) {
-      // 同一 ref 已退款过：幂等跳过，不重复加余额
+    if (!rowCount) {
       await client.query('ROLLBACK')
       return
     }

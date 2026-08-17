@@ -162,12 +162,18 @@ export async function finishConverted(userId: string, docId: string): Promise<vo
   )
 }
 
-export async function failConverted(userId: string, docId: string, error: string): Promise<void> {
-  await pool.query(
+export async function failConverted(
+  userId: string,
+  docId: string,
+  error: string,
+  expectedChunksDone: number,
+): Promise<boolean> {
+  const { rowCount } = await pool.query(
     `UPDATE converted_audios SET status = 'failed', error = $3, audio = NULL, size_bytes = 0, updated_at = now()
-     WHERE user_id = $1 AND doc_id = $2`,
-    [userId, docId, error],
+     WHERE user_id = $1 AND doc_id = $2 AND chunks_done = $4 AND status IN ('pending', 'converting')`,
+    [userId, docId, error, expectedChunksDone],
   )
+  return (rowCount ?? 0) > 0
 }
 
 export async function deleteConverted(userId: string, docId: string): Promise<void> {

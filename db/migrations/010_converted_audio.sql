@@ -21,6 +21,3 @@ CREATE TABLE IF NOT EXISTS converted_audios (
 );
 
 CREATE INDEX IF NOT EXISTS idx_converted_audios_user ON converted_audios (user_id);
-
--- 退款幂等：同一 user+ref 的退款只入账一次（并发失败路径避免双倍退款）
-CREATE UNIQUE INDEX IF NOT EXISTS uq_credit_tx_adjustment ON credit_transactions (user_id, ref) WHERE kind = 'adjustment';

@@ -16,7 +16,6 @@ import {
 
 export const CONVERT_BATCH_SIZE = 4
 export const CONVERT_DESC = '完整转换'
-const CONVERT_REFUND_DESC = '完整转换失败退还积分'
 
 export function convertRef(docId: string, voice: string, rate: number, skipCode: boolean, skipTable: boolean): string {
   return `convert:${docId}:${voice}:${rate}:${skipCode ? 1 : 0}:${skipTable ? 1 : 0}`
@@ -149,9 +148,12 @@ export async function advanceConversion(userId: string, docId: string, batchSize
       // 需加上 updated.sizeBytes（含本批音频）才算入刚完成的整条音频
       const usedBytes = (await sumServerDocumentBytes(userId)) + (await sumConvertedBytes(userId)) + updated.sizeBytes
       if (usedBytes > quotaBytes) {
-        await failConverted(userId, docId, 'QUOTA_EXCEEDED')
-        await refundCredits(userId, creditsFor(row), ref, { docId, reason: 'quota' }, CONVERT_REFUND_DESC)
-        return toStatus({ ...updated, status: 'failed', error: 'QUOTA_EXCEEDED', sizeBytes: 0 })
+        const failed = await failConverted(userId, docId, 'QUOTA_EXCEEDED', done)
+        if (failed) {
+          await refundCredits(userId, creditsFor(row), ref, { docId, reason: 'quota' })
+        }
+        const current = await getConvertedMeta(userId, docId)
+        return toStatus(current ?? { ...updated, status: 'failed', error: 'QUOTA_EXCEEDED', sizeBytes: 0 })
       }
       await finishConverted(userId, docId)
       return toStatus({ ...updated, status: 'done', progress: 1 })
@@ -162,9 +164,12 @@ export async function advanceConversion(userId: string, docId: string, batchSize
   } catch (err) {
     console.error('convert advance failed', err)
     const message = err instanceof Error ? err.message : String(err)
-    await failConverted(userId, docId, message)
-    await refundCredits(userId, creditsFor(row), ref, { docId, reason: 'failed' }, CONVERT_REFUND_DESC)
-    return toStatus({ ...row, status: 'failed', error: message, sizeBytes: 0 })
+    const failed = await failConverted(userId, docId, message, row.chunksDone)
+    if (failed) {
+      await refundCredits(userId, creditsFor(row), ref, { docId, reason: 'failed' })
+    }
+    const current = await getConvertedMeta(userId, docId)
+    return toStatus(current ?? { ...row, status: 'failed', error: message, sizeBytes: 0 })
   }
 }
 

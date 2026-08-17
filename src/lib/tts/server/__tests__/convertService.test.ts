@@ -57,6 +57,7 @@ function doneMeta(overrides: Partial<ConvertedAudio> = {}): ConvertedAudio {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(appendConvertedAudio).mockResolvedValue(true)
+  vi.mocked(failConverted).mockResolvedValue(true)
   vi.mocked(getProvider).mockReturnValue({
     id: 'doubao',
     costPerMillionChars: 38.9,
@@ -164,8 +165,8 @@ describe('advanceConversion', () => {
     vi.mocked(sumServerDocumentBytes).mockResolvedValue(200)
     vi.mocked(sumConvertedBytes).mockResolvedValue(0)
     const status = await advanceConversion('u1', 'doc-1', 4)
-    expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'QUOTA_EXCEEDED')
-    expect(refundCredits).toHaveBeenCalled()
+    expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'QUOTA_EXCEEDED', 8)
+    expect(refundCredits).toHaveBeenCalledWith('u1', expect.any(Number), 'convert:doc-1:alloy:1:1:1', expect.objectContaining({ docId: 'doc-1', reason: 'quota' }))
     expect(status.status).toBe('failed')
   })
 
@@ -192,8 +193,8 @@ describe('advanceConversion', () => {
     vi.mocked(sumServerDocumentBytes).mockResolvedValue(100)
     vi.mocked(sumConvertedBytes).mockResolvedValue(100)
     const status = await advanceConversion('u1', 'doc-1', 4)
-    expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'QUOTA_EXCEEDED')
-    expect(refundCredits).toHaveBeenCalled()
+    expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'QUOTA_EXCEEDED', 8)
+    expect(refundCredits).toHaveBeenCalledWith('u1', expect.any(Number), 'convert:doc-1:alloy:1:1:1', expect.objectContaining({ docId: 'doc-1', reason: 'quota' }))
     expect(finishConverted).not.toHaveBeenCalled()
     expect(status.status).toBe('failed')
   })
@@ -201,6 +202,7 @@ describe('advanceConversion', () => {
   it('合成失败时失败并退款', async () => {
     vi.mocked(getConvertedMeta)
       .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 0, chunksTotal: 8, audio: null, sizeBytes: 0 }))
+      .mockResolvedValueOnce(doneMeta({ status: 'failed', error: 'boom', chunksDone: 0, chunksTotal: 8, audio: null, sizeBytes: 0 }))
     vi.mocked(getServerDocument).mockResolvedValue(mockDocMulti)
     vi.mocked(getProvider).mockReturnValue({
       id: 'doubao', costPerMillionChars: 38.9,
@@ -208,9 +210,26 @@ describe('advanceConversion', () => {
       synthesize: vi.fn(async () => { throw new Error('boom') }),
     } as never)
     const status = await advanceConversion('u1', 'doc-1', 4)
-    expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'boom')
-    expect(refundCredits).toHaveBeenCalled()
+    expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'boom', 0)
+    expect(refundCredits).toHaveBeenCalledWith('u1', expect.any(Number), 'convert:doc-1:alloy:1:1:1', expect.objectContaining({ docId: 'doc-1', reason: 'failed' }))
     expect(status.status).toBe('failed')
+  })
+
+  it('合成失败但并发赢家已推进时 failConverted 不生效、不退款并返回最新状态', async () => {
+    vi.mocked(getConvertedMeta)
+      .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 0, chunksTotal: 8, audio: null, sizeBytes: 0 }))
+      .mockResolvedValueOnce(doneMeta({ status: 'converting', chunksDone: 8, chunksTotal: 8, progress: 1, audio: null, sizeBytes: 100 }))
+    vi.mocked(getServerDocument).mockResolvedValue(mockDocMulti)
+    vi.mocked(failConverted).mockResolvedValue(false)
+    vi.mocked(getProvider).mockReturnValue({
+      id: 'doubao', costPerMillionChars: 38.9,
+      voices: [{ id: 'alloy', name: 'v' }],
+      synthesize: vi.fn(async () => { throw new Error('boom') }),
+    } as never)
+    const status = await advanceConversion('u1', 'doc-1', 4)
+    expect(failConverted).toHaveBeenCalledWith('u1', 'doc-1', 'boom', 0)
+    expect(refundCredits).not.toHaveBeenCalled()
+    expect(status).toEqual(expect.objectContaining({ status: 'converting', sizeBytes: 100, progress: 1 }))
   })
 
   it('无转换记录抛 CONVERT_NOT_FOUND', async () => {
