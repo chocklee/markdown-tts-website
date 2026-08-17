@@ -138,7 +138,7 @@ export const zh = {
   'profile.plansMeta': '包月 · 到期清零',
   'profile.mostPopular': '最受欢迎',
   'profile.bestValue': '超值',
-  'profile.perMonth': '积分/月',
+  'profile.perMonth': 'USD / 月',
   'profile.starterDesc': '适合先体验朗读与问答功能',
   'profile.lightDesc': '日常朗读的常用选择',
   'profile.unlimitedDesc': '单位积分最划算，适合深度用户',

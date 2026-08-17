@@ -140,7 +140,7 @@ export const en: Record<keyof typeof zh, string> = {
   'profile.plansMeta': 'Monthly · resets to zero',
   'profile.mostPopular': 'Most popular',
   'profile.bestValue': 'Best value',
-  'profile.perMonth': 'credits/month',
+  'profile.perMonth': 'USD / month',
   'profile.starterDesc': 'A great way to try narration & Q&A',
   'profile.lightDesc': 'The everyday listening choice',
   'profile.unlimitedDesc': 'Best value per credit, for heavy users',
