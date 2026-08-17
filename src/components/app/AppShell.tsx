@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useUiStore } from '@/lib/state/uiStore'
-import { useI18n, LangSwitch } from '@/lib/i18n'
+import { useI18n } from '@/lib/i18n'
 import { IconLibrary, IconProfile, IconLock, IconCard } from './icons'
 
 export type AppNav = 'library' | 'reader' | 'profile'
@@ -127,7 +127,6 @@ export function AppShell({ nav, children }: { nav: AppNav; children: ReactNode }
                 {t('shell.login')}
               </Link>
             )}
-            <LangSwitch />
           </div>
           {children}
         </div>

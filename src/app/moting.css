@@ -995,7 +995,8 @@
       .player { bottom: 62px; padding: 10px 16px 12px; }
       .toast { bottom: 140px; }
       .reader-toolbar { flex-wrap: wrap; top: 60px; margin: 0 -16px; padding: 12px 16px; }
-      .rt-actions { order: 3; flex-basis: 100%; }
+      .rt-actions { order: 3; flex-basis: 100%; flex-wrap: wrap; }
+      .rt-btn { padding: 0 12px; }
       .article p { font-size: 15px; }
       .feed { padding: 10px 0; }
     }
