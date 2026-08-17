@@ -17,7 +17,7 @@ import type { LibraryDocument } from '@/types/document'
 export function ReaderClient({ docId }: { docId: string | null }) {
   const router = useRouter()
   const { t } = useI18n()
-  const { data: session } = useSession()
+  const { status, data: session } = useSession()
   const userKey = libraryUserId(session)
   const [stored, setStored] = useState<LibraryDocument | null>(null)
   const [doc, setDoc] = useState<ReaderDocument | null>(null)
@@ -25,6 +25,9 @@ export function ReaderClient({ docId }: { docId: string | null }) {
   const document = useReaderStore((s) => s.document)
 
   useEffect(() => {
+    // 等 next-auth 状态就绪再查本地文档，避免 loading 期间用空账号查不到
+    // 刚保存的文档而被重定向回首页
+    if (status === 'loading') return
     let cancelled = false
     async function load() {
       try {
@@ -56,7 +59,7 @@ export function ReaderClient({ docId }: { docId: string | null }) {
     return () => {
       cancelled = true
     }
-  }, [docId, router, userKey])
+  }, [status, docId, router, userKey])
 
   useEffect(() => {
     if (!stored || !doc || document?.id === doc.id) return

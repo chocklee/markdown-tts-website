@@ -1,7 +1,7 @@
 'use client'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { getSession } from 'next-auth/react'
 import { parseDocument } from '@/lib/markdown/parse'
 import { saveDocumentToLibrary } from '@/lib/library/actions'
 import { libraryUserId } from '@/lib/library/userKey'
@@ -18,8 +18,6 @@ function byteLength(s: string): number {
 export default function InputSection() {
   const router = useRouter()
   const { t } = useI18n()
-  const { data: session } = useSession()
-  const userKey = libraryUserId(session)
   const fileRef = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
   const [fileName, setFileName] = useState('')
@@ -85,6 +83,9 @@ export default function InputSection() {
     setSaving(true)
     try {
       const doc = parseDocument(content, fileName || t('newDoc.untitled'))
+      // 用点击时刻的实时登录态确定归属账号，避免会话未就绪时存进游客命名空间
+      const session = await getSession()
+      const userKey = libraryUserId(session)
       const stored = await saveDocumentToLibrary({ title: doc.title, content }, userKey)
       scheduleSync(userKey)
       router.push(`/reader?docId=${encodeURIComponent(stored.docId)}`)

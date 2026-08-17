@@ -14,7 +14,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('next-auth/react', () => ({
-  useSession: () => ({ status: 'unauthenticated', data: null }),
+  getSession: async () => null,
 }))
 
 vi.mock('@/lib/sync/schedule', () => ({
