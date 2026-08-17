@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { CREDIT_PACKAGES, CONFIG } from '@/lib/config'
-import { useI18n, LangSwitch } from '@/lib/i18n'
+import { useI18n, LangSeg } from '@/lib/i18n'
 import { pkgName } from '@/lib/i18n/packages'
 import {
   IconPlay,
@@ -143,7 +143,7 @@ export function LandingView() {
             <Link className="site-link solid" href={startHref}>{t('landing.headerFreeStart')}</Link>
           </>
         )}
-        <LangSwitch />
+        <LangSeg />
       </header>
 
       <section className="landing-hero">

@@ -1690,6 +1690,31 @@ input[type="checkbox"].switch:disabled { opacity: 0.55; cursor: default; }
   transition: background 150ms ease, color 150ms ease;
 }
 .lang-switch:hover { background: var(--fg-soft); color: var(--fg); }
+.lang-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  flex: 0 0 auto;
+}
+.lang-seg button {
+  min-width: 34px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+.lang-seg button.active { background: var(--accent-strong); color: #fff; }
+.lang-seg button:not(.active):hover { background: var(--fg-soft); color: var(--fg); }
 .sidebar .lang-switch { margin-top: auto; }
 .topbar .lang-switch { flex: 0 0 auto; }
 .landing .site-header .lang-switch { flex: 0 0 auto; }

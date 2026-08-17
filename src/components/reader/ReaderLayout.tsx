@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import type { ReaderDocument } from '@/types/reader'
 import { useAccount } from '@/components/app/AppShell'
-import { useI18n, LangSwitch } from '@/lib/i18n'
+import { useI18n } from '@/lib/i18n'
 import { OutlinePanel } from './OutlinePanel'
 import { ContentView } from './ContentView'
 import { SettingsPanel } from './SettingsPanel'
@@ -53,7 +53,6 @@ export function ReaderLayout({ document }: { document: ReaderDocument }) {
               <IconChat />
               {t('reader.qa')}
             </button>
-            <LangSwitch />
           </div>
         </div>
 

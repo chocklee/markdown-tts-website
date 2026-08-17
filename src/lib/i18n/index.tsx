@@ -62,3 +62,27 @@ export function LangSwitch({ className = '' }: { className?: string }) {
     </button>
   )
 }
+
+export function LangSeg({ className = '' }: { className?: string }) {
+  const { lang, setLang } = useI18n()
+  return (
+    <div className={`lang-seg ${className}`} role="group" aria-label="Language switch">
+      <button
+        type="button"
+        className={lang === 'zh' ? 'active' : ''}
+        onClick={() => setLang('zh')}
+        aria-pressed={lang === 'zh'}
+      >
+        中
+      </button>
+      <button
+        type="button"
+        className={lang === 'en' ? 'active' : ''}
+        onClick={() => setLang('en')}
+        aria-pressed={lang === 'en'}
+      >
+        EN
+      </button>
+    </div>
+  )
+}

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useReaderStore } from '@/lib/state/readerStore'
 import { useUiStore } from '@/lib/state/uiStore'
-import { useI18n, LangSwitch } from '@/lib/i18n'
+import { useI18n, LangSeg } from '@/lib/i18n'
 import { pkgName } from '@/lib/i18n/packages'
 import { AppShell, GuestGate } from '@/components/app/AppShell'
 import { IconChevron } from '@/components/app/icons'
@@ -314,7 +314,7 @@ function ProfileContent() {
                 <div className="title">{t('profile.language')}</div>
                 <div className="sub">{lang === 'zh' ? '中文' : 'English'}</div>
               </div>
-              <LangSwitch />
+              <LangSeg />
             </div>
             <p className="group-label">
               {t('reader.reading')}
