@@ -105,4 +105,14 @@ export async function upsertServerDocument(userId: string, doc: SyncedDocument):
 
 export async function hardDeleteServerDocument(userId: string, docId: string): Promise<void> {
   await pool.query('DELETE FROM documents WHERE user_id = $1 AND doc_id = $2', [userId, docId])
+  await pool.query('DELETE FROM converted_audios WHERE user_id = $1 AND doc_id = $2', [userId, docId])
+}
+
+export async function sumServerDocumentBytes(userId: string): Promise<number> {
+  const { rows } = await pool.query<{ used: string }>(
+    `SELECT COALESCE(SUM(CASE WHEN deleted_at IS NULL THEN file_size_bytes ELSE 0 END), 0)::text AS used
+     FROM documents WHERE user_id = $1`,
+    [userId],
+  )
+  return Number(rows[0]?.used ?? 0)
 }
