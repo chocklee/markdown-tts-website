@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useReaderStore } from '@/lib/state/readerStore'
 import { useUiStore } from '@/lib/state/uiStore'
-import { useI18n } from '@/lib/i18n'
+import { useI18n, LangSwitch } from '@/lib/i18n'
 import { pkgName } from '@/lib/i18n/packages'
 import { AppShell, GuestGate } from '@/components/app/AppShell'
 import { IconChevron } from '@/components/app/icons'
@@ -307,6 +307,16 @@ function ProfileContent() {
               <h2 className="h2">{t('profile.settingsTitle')}</h2>
             </div>
             <p className="group-label" style={{ marginTop: 0 }}>
+              {t('profile.languageGroup')}
+            </p>
+            <div className="row-item">
+              <div className="body">
+                <div className="title">{t('profile.language')}</div>
+                <div className="sub">{lang === 'zh' ? '中文' : 'English'}</div>
+              </div>
+              <LangSwitch />
+            </div>
+            <p className="group-label">
               {t('reader.reading')}
             </p>
             <div className="row-item">

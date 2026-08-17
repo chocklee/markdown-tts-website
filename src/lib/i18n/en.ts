@@ -150,6 +150,8 @@ export const en: Record<keyof typeof zh, string> = {
   'profile.recordsLink': 'View all usage records',
   'profile.recordsLinkSub': 'Top-ups, subscription grants and narration charges',
   'profile.settingsTitle': 'Settings',
+  'profile.languageGroup': 'Language',
+  'profile.language': 'Interface language',
   'profile.skipCode': 'Skip code blocks',
   'profile.skipTable': 'Skip tables',
   'profile.storageTitle': 'Cloud storage',

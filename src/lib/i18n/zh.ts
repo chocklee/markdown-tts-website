@@ -148,6 +148,8 @@ export const zh = {
   'profile.recordsLink': '查看全部消费记录',
   'profile.recordsLinkSub': '充值、订阅发放与朗读扣费明细',
   'profile.settingsTitle': '设置',
+  'profile.languageGroup': '语言',
+  'profile.language': '界面语言',
   'profile.skipCode': '跳过代码块',
   'profile.skipTable': '跳过表格',
   'profile.storageTitle': '云存储',
