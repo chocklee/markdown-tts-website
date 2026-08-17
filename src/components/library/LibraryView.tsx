@@ -53,7 +53,10 @@ export function LibraryView() {
   const [convertedMap, setConvertedMap] = useState<Record<string, boolean>>({})
   const [syncing, setSyncing] = useState(false)
   const syncingRef = useRef(false)
+  const aliveRef = useRef(true)
   const showToast = useUiStore((s) => s.showToast)
+
+  useEffect(() => () => { aliveRef.current = false }, [])
 
   const refresh = useCallback(async () => {
     const all = await listDocuments()
@@ -83,6 +86,7 @@ export function LibraryView() {
   }, [status, refresh, showToast, t])
 
   const convertDoc = useCallback(async (doc: LibraryDocument) => {
+    aliveRef.current = true
     setConverting((m) => ({ ...m, [doc.docId]: 0 }))
     try {
       const res = await fetch('/api/tts/convert', {
@@ -92,6 +96,7 @@ export function LibraryView() {
       })
       const data = (await res.json().catch(() => null)) as { status?: string; error?: string } | null
       if (!res.ok) {
+        setConvertedMap((m) => ({ ...m, [doc.docId]: false }))
         showToast(data?.error ?? t('convert.failed'))
         setConverting((m) => { const n = { ...m }; delete n[doc.docId]; return n })
         return
@@ -104,20 +109,29 @@ export function LibraryView() {
       }
       for (let i = 0; i < 600; i += 1) {
         await new Promise((r) => setTimeout(r, 2000))
+        if (!aliveRef.current) return
         const sres = await fetch(`/api/tts/convert?docId=${encodeURIComponent(doc.docId)}&advance=1`)
-        const sdata = (await sres.json().catch(() => null)) as { status?: string; progress?: number } | null
+        if (!aliveRef.current) return
+        const sdata = (await sres.json().catch(() => null)) as { status?: string; progress?: number; error?: string } | null
         setConverting((m) => ({ ...m, [doc.docId]: Math.round((sdata?.progress ?? 0) * 100) }))
+        if (!sres.ok) {
+          setConvertedMap((m) => ({ ...m, [doc.docId]: false }))
+          showToast(sdata?.error ?? t('convert.failed'))
+          break
+        }
         if (sdata?.status === 'done') {
           setConvertedMap((m) => ({ ...m, [doc.docId]: true }))
           showToast(t('convert.done'))
           break
         }
         if (sdata?.status === 'failed') {
+          setConvertedMap((m) => ({ ...m, [doc.docId]: false }))
           showToast(t('convert.failed'))
           break
         }
       }
     } catch {
+      setConvertedMap((m) => ({ ...m, [doc.docId]: false }))
       showToast(t('convert.failed'))
     }
     setConverting((m) => { const n = { ...m }; delete n[doc.docId]; return n })
@@ -128,6 +142,7 @@ export function LibraryView() {
     if (menuFor === docId) return
     try {
       const res = await fetch(`/api/tts/convert?docId=${encodeURIComponent(docId)}`)
+      if (!res.ok) return
       const data = (await res.json().catch(() => null)) as { status?: string } | null
       setConvertedMap((m) => ({ ...m, [docId]: data?.status === 'done' }))
     } catch {
