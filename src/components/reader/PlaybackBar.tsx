@@ -24,7 +24,7 @@ export function PlaybackBar() {
   const total = speakableIds.length
 
   return (
-    <div className="border-t border-slate-200 bg-white px-6 py-3">
+    <div className="border-b border-slate-200 bg-white px-6 py-3">
       <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
         <div className="flex items-center gap-1">
           <button
