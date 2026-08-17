@@ -1655,6 +1655,7 @@ input[type="checkbox"].switch:disabled { opacity: 0.55; cursor: default; }
 }
 @media (max-width: 767px) {
   .landing-nav { display: none; }
+  .landing .site-header .brand .cap { display: none; }
   .landing-hero { padding-top: 44px; }
   .hero-title { font-size: 36px; }
   .mock-qa { display: none; }
@@ -1663,5 +1664,6 @@ input[type="checkbox"].switch:disabled { opacity: 0.55; cursor: default; }
   .feat-grid, .plans { grid-template-columns: 1fr; }
   .section { padding: 56px 20px; }
   .landing-hero { padding: 40px 20px 48px; }
-  .landing .site-header { padding: 10px 16px; gap: 10px; }
+  .landing .site-header { padding: 10px 16px; gap: 8px; }
+  .landing .site-header .site-link { padding: 0 10px; }
 }
