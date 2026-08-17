@@ -1674,3 +1674,24 @@ input[type="checkbox"].switch:disabled { opacity: 0.55; cursor: default; }
   .landing .site-header { padding: 10px 16px; gap: 16px; }
   .landing .site-header .site-link { padding: 0 10px; }
 }
+
+/* 语言切换 */
+.lang-switch {
+  min-width: 40px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+.lang-switch:hover { background: var(--fg-soft); color: var(--fg); }
+.sidebar .lang-switch { margin-top: auto; }
+.topbar .lang-switch { flex: 0 0 auto; }
+.landing .site-header .lang-switch { flex: 0 0 auto; }
+.auth-card .lang-switch { position: absolute; top: 18px; right: 18px; }
+.auth-card { position: relative; }
