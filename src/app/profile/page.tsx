@@ -142,14 +142,31 @@ function ProfileContent() {
   const initial = (name || '墨')[0]
   const email = session?.user?.email ?? null
 
-  const openBuy = useCallback((pkg: PackageInfo) => {
-    setChosenId(pkg.id)
-    setSelected(pkg)
-  }, [])
+  const currentPlanId =
+    balance.subscription?.status === 'active' && balance.subscription.planId
+      ? balance.subscription.planId
+      : null
+  const switchablePackages = useMemo(
+    () => (currentPlanId ? packages.filter((p) => p.id !== currentPlanId) : packages),
+    [packages, currentPlanId],
+  )
+
+  const openBuy = useCallback(
+    (pkg: PackageInfo) => {
+      const target = currentPlanId && pkg.id === currentPlanId ? (switchablePackages[0] ?? pkg) : pkg
+      setChosenId(target.id)
+      setSelected(target)
+    },
+    [currentPlanId, switchablePackages],
+  )
 
   const confirmBuy = useCallback(async () => {
     const pkg = packages.find((p) => p.id === chosenId)
     if (!pkg) return
+    if (currentPlanId && pkg.id === currentPlanId) {
+      showToast('当前已订阅该套餐')
+      return
+    }
     setBusy(true)
     try {
       const res = await fetch('/api/credits/checkout', {
@@ -168,7 +185,7 @@ function ProfileContent() {
     } finally {
       setBusy(false)
     }
-  }, [chosenId, packages, showToast])
+  }, [chosenId, packages, currentPlanId, showToast])
 
   const clearCache = useCallback(() => {
     clearPosition()
@@ -358,11 +375,14 @@ function ProfileContent() {
         <div className="modal-overlay show">
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
             <h3 id="m-title">订阅套餐</h3>
-            <p className="m-sub">选择要订阅的套餐 · 每月自动续费 · 剩余积分到期清零</p>
+            <p className="m-sub">
+              {currentPlanId
+                ? '切换后将取消当前订阅，并按新套餐重新计费 · 剩余积分到期清零'
+                : '选择要订阅的套餐 · 每月自动续费 · 剩余积分到期清零'}
+            </p>
             <div className="m-plans">
-              {packages.map((pkg) => {
+              {switchablePackages.map((pkg) => {
                 const chosen = pkg.id === chosenId
-                const isCurrent = balance.subscription?.status === 'active' && balance.subscription.planId === pkg.id
                 return (
                   <button
                     key={pkg.id}
@@ -371,15 +391,15 @@ function ProfileContent() {
                     aria-pressed={chosen}
                     onClick={() => setChosenId(pkg.id)}
                   >
-                    <span className="m-plan-name">
-                      {pkg.name}
-                      {isCurrent && <span className="tag-inline">当前</span>}
-                    </span>
+                    <span className="m-plan-name">{pkg.name}</span>
                     <span className="m-plan-credits">{pkg.credits} 积分/月</span>
                     <span className="m-plan-price num">${pkg.usd.toFixed(2)}/月</span>
                   </button>
                 )
               })}
+              {switchablePackages.length === 0 && (
+                <p className="meta" style={{ padding: '12px 0' }}>没有其他可选套餐</p>
+              )}
             </div>
             <div className="m-actions">
               <button type="button" className="btn-secondary" onClick={() => setSelected(null)} disabled={busy}>
